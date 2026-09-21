@@ -1,9 +1,23 @@
-import { SELLPAGE_SCHEMA_VERSION, createEmptyData, type SellpageDocument, type SellpageStatus } from '../schemas/sellpageSchema'
-import { localStorageAdapter, type SellpageStorageAdapter, type SellpageVersion } from './storageAdapter'
+import { SELLPAGE_SCHEMA_VERSION, parseSellpageData } from '../schemas/sellpageSchema'
+import {
+  createEmptyData,
+  defaultSeo,
+  defaultSettings,
+  defaultTheme,
+  type PublishedSellpage,
+  type SellpageData,
+  type SellpageDocument,
+  type SellpageSeo,
+  type SellpageSettings,
+  type SellpageTheme,
+  type SellpageVersion,
+} from '../schemas/sellpage.types'
+import { localStorageAdapter, type SellpageStorageAdapter } from './storageAdapter'
 
 /**
- * All Firestore/localStorage access goes through this module — UI
- * components never call the storage adapter directly (market2u-firebase-publish).
+ * Every read and write of a sellpage goes through this module. UI components
+ * never talk to storage directly, so draft/publish rules are enforced in one
+ * place (docs/sellpage/ARCHITECTURE.md).
  */
 let adapter: SellpageStorageAdapter = localStorageAdapter
 
@@ -12,7 +26,8 @@ export const setSellpageStorageAdapter = (next: SellpageStorageAdapter) => {
   adapter = next
 }
 
-const genId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sp_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+const genId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `sp_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
 const slugify = (input: string) =>
   input
@@ -23,10 +38,14 @@ const slugify = (input: string) =>
     .replace(/-+/g, '-')
     .slice(0, 80) || `page-${Date.now()}`
 
+const isSlugTaken = async (slug: string, excludeId?: string): Promise<boolean> => {
+  const existing = await adapter.getBySlug(slug)
+  return existing !== null && existing.id !== excludeId
+}
+
 /**
- * Slugs must be unique — the public route resolves one page per slug
- * (getPageBySlug returns the first match), so a collision would make a
- * second page publicly unreachable. Appends -2, -3, … until free.
+ * Slugs must be unique — the public route resolves one page per slug, so a
+ * collision would make a second page unreachable. Appends -2, -3, … until free.
  */
 const uniqueSlug = async (base: string, excludeId?: string): Promise<string> => {
   let slug = base
@@ -36,16 +55,57 @@ const uniqueSlug = async (base: string, excludeId?: string): Promise<string> => 
   return slug
 }
 
-const isSlugTaken = async (slug: string, excludeId?: string): Promise<boolean> => {
-  const existing = await adapter.getBySlug(slug)
-  return existing !== null && existing.id !== excludeId
-}
+// --- Reads -----------------------------------------------------------------
 
 export const listPages = () => adapter.list()
 
 export const getPage = (id: string) => adapter.get(id)
 
 export const getPageBySlug = (slug: string) => adapter.getBySlug(slug)
+
+export type PublishedLookup =
+  | { ok: true; page: PublishedSellpage }
+  | { ok: false; reason: 'missing' | 'corrupted' | 'incompatible' }
+
+/**
+ * The public route's only entry point. Reads publishedConfig — never the
+ * draft — validates it, and migrates it to the current schema version.
+ * Returns a reason instead of throwing so the caller renders a fallback
+ * rather than a blank page.
+ */
+export const getPublishedPageBySlug = async (slug: string): Promise<PublishedLookup> => {
+  let doc: SellpageDocument | null
+  try {
+    doc = await adapter.getBySlug(slug)
+  } catch {
+    return { ok: false, reason: 'corrupted' }
+  }
+
+  if (!doc || doc.status !== 'published' || doc.publishedConfig === null) {
+    return { ok: false, reason: 'missing' }
+  }
+
+  const parsed = parseSellpageData(doc.publishedConfig, doc.schemaVersion)
+  if (!parsed.ok) return { ok: false, reason: parsed.reason }
+
+  return {
+    ok: true,
+    page: {
+      id: doc.id,
+      slug: doc.slug,
+      name: doc.name,
+      data: parsed.data,
+      // Published look/SEO fall back to defaults if a page was published
+      // before these fields existed; never to the draft values.
+      theme: doc.publishedTheme ?? defaultTheme(),
+      seo: doc.publishedSeo ?? defaultSeo(),
+      settings: doc.publishedSettings ?? defaultSettings(),
+      publishedAt: doc.publishedAt,
+    },
+  }
+}
+
+// --- Writes ----------------------------------------------------------------
 
 export const createPage = async (name: string, userId: string | null): Promise<SellpageDocument> => {
   const now = Date.now()
@@ -56,7 +116,13 @@ export const createPage = async (name: string, userId: string | null): Promise<S
     status: 'draft',
     schemaVersion: SELLPAGE_SCHEMA_VERSION,
     draftConfig: createEmptyData(),
+    draftTheme: defaultTheme(),
+    draftSeo: defaultSeo(),
+    draftSettings: defaultSettings(),
     publishedConfig: null,
+    publishedTheme: null,
+    publishedSeo: null,
+    publishedSettings: null,
     createdAt: now,
     updatedAt: now,
     publishedAt: null,
@@ -67,11 +133,58 @@ export const createPage = async (name: string, userId: string | null): Promise<S
   return doc
 }
 
-/** Writes draftConfig ONLY. Never touches publishedConfig — the public page never changes here. */
-export const saveDraft = async (id: string, draftConfig: SellpageDocument['draftConfig'], userId: string | null): Promise<SellpageDocument> => {
+/** Writes draftConfig ONLY. Never touches any published field. */
+export const saveDraft = async (id: string, draftConfig: SellpageData, userId: string | null): Promise<SellpageDocument> => {
   const doc = await adapter.get(id)
   if (!doc) throw new Error(`Sellpage ${id} not found`)
   const next: SellpageDocument = { ...doc, draftConfig, updatedAt: Date.now(), updatedBy: userId }
+  await adapter.save(next)
+  return next
+}
+
+/** Draft-only writes for the surrounding page settings. Same rule as saveDraft. */
+export const saveDraftTheme = async (id: string, draftTheme: SellpageTheme, userId: string | null): Promise<SellpageDocument> => {
+  const doc = await adapter.get(id)
+  if (!doc) throw new Error(`Sellpage ${id} not found`)
+  const next: SellpageDocument = { ...doc, draftTheme, updatedAt: Date.now(), updatedBy: userId }
+  await adapter.save(next)
+  return next
+}
+
+export const saveDraftSeo = async (id: string, draftSeo: SellpageSeo, userId: string | null): Promise<SellpageDocument> => {
+  const doc = await adapter.get(id)
+  if (!doc) throw new Error(`Sellpage ${id} not found`)
+  const next: SellpageDocument = { ...doc, draftSeo, updatedAt: Date.now(), updatedBy: userId }
+  await adapter.save(next)
+  return next
+}
+
+export const saveDraftSettings = async (id: string, draftSettings: SellpageSettings, userId: string | null): Promise<SellpageDocument> => {
+  const doc = await adapter.get(id)
+  if (!doc) throw new Error(`Sellpage ${id} not found`)
+  const next: SellpageDocument = { ...doc, draftSettings, updatedAt: Date.now(), updatedBy: userId }
+  await adapter.save(next)
+  return next
+}
+
+export const renamePage = async (id: string, name: string, userId: string | null): Promise<SellpageDocument> => {
+  const doc = await adapter.get(id)
+  if (!doc) throw new Error(`Sellpage ${id} not found`)
+  const next: SellpageDocument = { ...doc, name, updatedAt: Date.now(), updatedBy: userId }
+  await adapter.save(next)
+  return next
+}
+
+/** Changing a slug keeps uniqueness, excluding the page itself. */
+export const changeSlug = async (id: string, slug: string, userId: string | null): Promise<SellpageDocument> => {
+  const doc = await adapter.get(id)
+  if (!doc) throw new Error(`Sellpage ${id} not found`)
+  const next: SellpageDocument = {
+    ...doc,
+    slug: await uniqueSlug(slugify(slug), id),
+    updatedAt: Date.now(),
+    updatedBy: userId,
+  }
   await adapter.save(next)
   return next
 }
@@ -88,8 +201,8 @@ export const validateForPublish = (doc: SellpageDocument): PublishValidation => 
 }
 
 /**
- * validate -> create version -> draft becomes published -> set publishedAt.
- * This is the only path that changes what the public page renders.
+ * validate -> snapshot a version -> draft becomes published -> set publishedAt.
+ * The ONLY path that changes what the public page renders.
  */
 export const publishPage = async (id: string, userId: string | null): Promise<SellpageDocument> => {
   const doc = await adapter.get(id)
@@ -99,21 +212,16 @@ export const publishPage = async (id: string, userId: string | null): Promise<Se
   if (!validation.ok) throw new Error(validation.errors.join(' '))
 
   const now = Date.now()
-  const previousVersion = (await adapter.listVersions(id))[0]?.version ?? 0
-  const version: SellpageVersion = {
-    id: genId(),
-    pageId: id,
-    version: previousVersion + 1,
-    timestamp: now,
-    user: userId,
-    config: doc.draftConfig,
-  }
-  await adapter.saveVersion(version)
+  await createVersion(doc, userId, now)
 
   const next: SellpageDocument = {
     ...doc,
     status: 'published',
-    publishedConfig: doc.draftConfig,
+    schemaVersion: SELLPAGE_SCHEMA_VERSION,
+    publishedConfig: structuredClone(doc.draftConfig),
+    publishedTheme: structuredClone(doc.draftTheme),
+    publishedSeo: structuredClone(doc.draftSeo),
+    publishedSettings: structuredClone(doc.draftSettings),
     publishedAt: now,
     updatedAt: now,
     updatedBy: userId,
@@ -122,10 +230,11 @@ export const publishPage = async (id: string, userId: string | null): Promise<Se
   return next
 }
 
+/** Takes the page offline without discarding what was published. */
 export const unpublishPage = async (id: string, userId: string | null): Promise<SellpageDocument> => {
   const doc = await adapter.get(id)
   if (!doc) throw new Error(`Sellpage ${id} not found`)
-  const next: SellpageDocument = { ...doc, status: 'unpublished' as SellpageStatus, updatedAt: Date.now(), updatedBy: userId }
+  const next: SellpageDocument = { ...doc, status: 'unpublished', updatedAt: Date.now(), updatedBy: userId }
   await adapter.save(next)
   return next
 }
@@ -143,7 +252,14 @@ export const duplicatePage = async (id: string, userId: string | null): Promise<
     // Deep-copied: a shallow spread would leave the copy sharing the
     // original's block tree, so editing one could mutate the other.
     draftConfig: structuredClone(doc.draftConfig),
+    draftTheme: structuredClone(doc.draftTheme),
+    draftSeo: structuredClone(doc.draftSeo),
+    draftSettings: structuredClone(doc.draftSettings),
+    // A duplicate is never born published.
     publishedConfig: null,
+    publishedTheme: null,
+    publishedSeo: null,
+    publishedSettings: null,
     publishedAt: null,
     createdAt: now,
     updatedAt: now,
@@ -156,17 +272,61 @@ export const duplicatePage = async (id: string, userId: string | null): Promise<
 
 export const deletePage = (id: string) => adapter.remove(id)
 
-export const listVersions = (pageId: string) => adapter.listVersions(pageId)
+// --- Versions --------------------------------------------------------------
 
-/** Loads a past version into the DRAFT only. Publishing remains a separate, explicit step. */
+/**
+ * Snapshots the page's CURRENT DRAFT as the next version. Called by
+ * publishPage; exported so an explicit "save a checkpoint" action can reuse it.
+ */
+export const createVersion = async (doc: SellpageDocument, userId: string | null, timestamp = Date.now()): Promise<SellpageVersion> => {
+  const previous = (await adapter.listVersions(doc.id))[0]?.version ?? 0
+  const version: SellpageVersion = {
+    id: genId(),
+    pageId: doc.id,
+    version: previous + 1,
+    timestamp,
+    user: userId,
+    schemaVersion: doc.schemaVersion,
+    config: structuredClone(doc.draftConfig),
+    theme: structuredClone(doc.draftTheme),
+    seo: structuredClone(doc.draftSeo),
+    settings: structuredClone(doc.draftSettings),
+  }
+  await adapter.saveVersion(version)
+  return version
+}
+
+/** Newest first. */
+export const getVersions = (pageId: string) => adapter.listVersions(pageId)
+
+/** @deprecated use getVersions — kept so older call sites keep compiling. */
+export const listVersions = getVersions
+
+/**
+ * Loads a past version into the DRAFT only, migrating it if it was written
+ * under an older schema. Publishing stays a separate, explicit step — a
+ * restore never changes what the public sees.
+ */
 export const restoreVersion = async (pageId: string, versionId: string, userId: string | null): Promise<SellpageDocument> => {
   const doc = await adapter.get(pageId)
   if (!doc) throw new Error(`Sellpage ${pageId} not found`)
-  const versions = await adapter.listVersions(pageId)
-  const version = versions.find((v) => v.id === versionId)
-  if (!version || !version.config) throw new Error(`Version ${versionId} not found`)
 
-  const next: SellpageDocument = { ...doc, draftConfig: version.config, updatedAt: Date.now(), updatedBy: userId }
+  const version = (await adapter.listVersions(pageId)).find((v) => v.id === versionId)
+  if (!version) throw new Error(`Version ${versionId} not found`)
+
+  const parsed = parseSellpageData(version.config, version.schemaVersion ?? SELLPAGE_SCHEMA_VERSION)
+  if (!parsed.ok) throw new Error(`Version ${versionId} cannot be restored (${parsed.reason}).`)
+
+  const next: SellpageDocument = {
+    ...doc,
+    schemaVersion: SELLPAGE_SCHEMA_VERSION,
+    draftConfig: parsed.data,
+    draftTheme: structuredClone(version.theme ?? doc.draftTheme),
+    draftSeo: structuredClone(version.seo ?? doc.draftSeo),
+    draftSettings: structuredClone(version.settings ?? doc.draftSettings),
+    updatedAt: Date.now(),
+    updatedBy: userId,
+  }
   await adapter.save(next)
   return next
 }

@@ -3,8 +3,8 @@ import { Puck } from '@puckeditor/core'
 import '@puckeditor/core/puck.css'
 import { puckConfig } from '../blocks'
 import { sellpageViewports } from './viewports'
-import { useAutosave, type AutosaveStatus } from './useAutosave'
-import type { SellpageData, SellpageDocument } from '../schemas/sellpageSchema'
+import { useAutosave, type AutosaveStatus } from '../hooks/useAutosave'
+import type { SellpageData, SellpageDocument } from '../schemas/sellpage.types'
 import { publishPage, saveDraft, validateForPublish } from '../services/sellpageService'
 
 type Props = {

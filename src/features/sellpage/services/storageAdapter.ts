@@ -1,10 +1,12 @@
-import type { SellpageDocument } from '../schemas/sellpageSchema'
+import type { SellpageDocument, SellpageVersion } from '../schemas/sellpage.types'
+
+export type { SellpageVersion }
 
 /**
  * Storage is behind this interface so the service layer, builder and
  * public renderer never call a database directly. Swapping the
- * localStorage adapter below for a Firestore adapter (market2u-firebase-publish)
- * is a one-file change.
+ * localStorage adapter below for a Firestore adapter is a one-file change:
+ * implement this interface and pass it to setSellpageStorageAdapter().
  */
 export interface SellpageStorageAdapter {
   list(): Promise<SellpageDocument[]>
@@ -14,15 +16,6 @@ export interface SellpageStorageAdapter {
   remove(id: string): Promise<void>
   listVersions(pageId: string): Promise<SellpageVersion[]>
   saveVersion(version: SellpageVersion): Promise<void>
-}
-
-export type SellpageVersion = {
-  id: string
-  pageId: string
-  version: number
-  timestamp: number
-  user: string | null
-  config: SellpageDocument['publishedConfig']
 }
 
 const STORAGE_KEY = 'market2u:sellpages:v1'
@@ -56,8 +49,8 @@ const writeVersions = (versions: SellpageVersion[]) => {
 
 /**
  * Default adapter for local development and demos. Not multi-user safe —
- * replace with a Firestore-backed adapter (see market2u-firebase-publish)
- * before shipping the admin to real users.
+ * replace with a Firestore-backed adapter before shipping the admin to
+ * real users (see docs/sellpage/ARCHITECTURE.md).
  */
 export const localStorageAdapter: SellpageStorageAdapter = {
   async list() {

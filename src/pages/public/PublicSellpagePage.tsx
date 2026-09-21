@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { SellpageRenderer } from '../../features/sellpage/renderer/SellpageRenderer'
 import { FallbackPage } from '../../features/sellpage/renderer/FallbackPage'
-import { parseSellpageData, type SellpageData } from '../../features/sellpage/schemas/sellpageSchema'
-import { getPageBySlug } from '../../features/sellpage/services/sellpageService'
+import type { PublishedSellpage } from '../../features/sellpage/schemas/sellpage.types'
+import { getPublishedPageBySlug } from '../../features/sellpage/services/sellpageService'
+import { usePageHead } from '../../features/sellpage/hooks/usePageHead'
 
 type State =
   | { kind: 'loading' }
-  | { kind: 'ready'; data: SellpageData }
+  | { kind: 'ready'; page: PublishedSellpage }
   | { kind: 'fallback'; reason: 'missing' | 'corrupted' | 'incompatible' }
 
 /**
- * /s/:slug — reads publishedConfig ONLY, never draftConfig. Uses the same
- * SellpageRenderer/blocks as the admin preview.
+ * /s/:slug — renders publishedConfig ONLY, never the draft, through the same
+ * SellpageRenderer and block definitions the admin preview uses.
  */
 export function PublicSellpagePage() {
   const { slug } = useParams<{ slug: string }>()
@@ -22,17 +23,14 @@ export function PublicSellpagePage() {
     if (!slug) return
     let cancelled = false
 
-    getPageBySlug(slug)
-      .then((doc) => {
+    getPublishedPageBySlug(slug)
+      .then((result) => {
         if (cancelled) return
-        if (!doc || doc.status !== 'published' || !doc.publishedConfig) {
-          setState({ kind: 'fallback', reason: 'missing' })
-          return
-        }
-        const result = parseSellpageData(doc.publishedConfig, doc.schemaVersion)
-        setState(result.ok ? { kind: 'ready', data: result.data } : { kind: 'fallback', reason: result.reason })
+        setState(result.ok ? { kind: 'ready', page: result.page } : { kind: 'fallback', reason: result.reason })
       })
       .catch(() => {
+        // getPublishedPageBySlug already converts fetch errors into a reason;
+        // this is the belt-and-braces path so a public page is never blank.
         if (!cancelled) setState({ kind: 'fallback', reason: 'corrupted' })
       })
 
@@ -41,7 +39,9 @@ export function PublicSellpagePage() {
     }
   }, [slug])
 
+  usePageHead(state.kind === 'ready' ? state.page : null)
+
   if (state.kind === 'loading') return null
   if (state.kind === 'fallback') return <FallbackPage reason={state.reason} />
-  return <SellpageRenderer data={state.data} />
+  return <SellpageRenderer data={state.page.data} theme={state.page.theme} />
 }

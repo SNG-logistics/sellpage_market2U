@@ -1,44 +1,16 @@
-import type { Data } from '@puckeditor/core'
-import type { BlockProps } from '../blocks'
+import { canReadSchemaVersion, migrateToCurrent, SELLPAGE_SCHEMA_VERSION } from './schemaMigrations'
+import type { SellpageData } from './sellpage.types'
 
 /**
- * Bump when the stored Puck data shape changes in a way old renderers
- * cannot read. Add a step to `migrations` for every bump.
+ * Validation and parsing for stored sellpage data.
+ *
+ * The contract types live in `sellpage.types.ts` and the version/migration
+ * infrastructure in `schemaMigrations.ts`; both are re-exported here so
+ * existing imports of this module keep working.
  */
-export const SELLPAGE_SCHEMA_VERSION = 1
-
-// Typed against BlockRegistry's BlockProps (type-only import — no runtime
-// coupling), so stored data always matches the components actually registered.
-export type SellpageData = Data<BlockProps>
-
-export type SellpageStatus = 'draft' | 'published' | 'unpublished'
-
-/** Persisted document. Draft and published configs are always separate. */
-export type SellpageDocument = {
-  id: string
-  name: string
-  slug: string
-  status: SellpageStatus
-  schemaVersion: number
-  draftConfig: SellpageData
-  publishedConfig: SellpageData | null
-  createdAt: number
-  updatedAt: number
-  publishedAt: number | null
-  createdBy: string | null
-  updatedBy: string | null
-}
-
-export const createEmptyData = (): SellpageData => ({
-  root: { props: { title: '' } },
-  content: [],
-  zones: {},
-})
-
-type Migration = (data: SellpageData) => SellpageData
-
-/** migrations[n] upgrades data from schema version n to n + 1. */
-const migrations: Record<number, Migration> = {}
+export * from './sellpage.types'
+export { SELLPAGE_SCHEMA_VERSION, migrations, migrateToCurrent, canReadSchemaVersion } from './schemaMigrations'
+export type { Migration, MigrationResult } from './schemaMigrations'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -64,20 +36,17 @@ export type ParseResult =
 
 /**
  * Validates stored data and upgrades it to the current schema version.
- * Never throws: callers decide what to render on failure.
+ * Never throws: callers decide what to render on failure, and the public
+ * route renders a fallback rather than a blank page.
  */
 export const parseSellpageData = (value: unknown, schemaVersion: number): ParseResult => {
   if (value === null || value === undefined) return { ok: false, reason: 'missing' }
   if (!isValidSellpageData(value)) return { ok: false, reason: 'corrupted' }
-  if (!Number.isInteger(schemaVersion) || schemaVersion < 1 || schemaVersion > SELLPAGE_SCHEMA_VERSION) {
-    return { ok: false, reason: 'incompatible' }
-  }
+  if (!canReadSchemaVersion(schemaVersion)) return { ok: false, reason: 'incompatible' }
 
-  let data = value
-  for (let version = schemaVersion; version < SELLPAGE_SCHEMA_VERSION; version++) {
-    const migrate = migrations[version]
-    if (!migrate) return { ok: false, reason: 'incompatible' }
-    data = migrate(data)
-  }
-  return { ok: true, data }
+  const result = migrateToCurrent(value, schemaVersion)
+  return result.ok ? { ok: true, data: result.data } : { ok: false, reason: 'incompatible' }
 }
+
+/** Re-exported for callers that only need the current version number. */
+export const currentSchemaVersion = SELLPAGE_SCHEMA_VERSION
