@@ -1,32 +1,44 @@
-# React + TypeScript + Vite
+# sellpage_market2U
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Visual Sellpage Builder for Market2U. Admins compose sellpages from blocks in
+an editor; the published result is served on a public route.
 
-Currently, two official plugins are available:
+**Puck (`@puckeditor/core`) is the page builder engine.** Drag, drop, block
+ordering, insertion, selection, nesting, fields, canvas and viewports are all
+Puck's. No custom drag-and-drop engine exists in this repo and none should be
+added — see `docs/sellpage/ARCHITECTURE.md`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Getting started
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | `tsc -b` then production build |
+| `npm run lint` | oxlint |
+| `npm test` | vitest (run mode) |
+
+## Routes
+
+| Route | Purpose |
+| --- | --- |
+| `/admin/sellpages` | Page list — create, edit, duplicate, delete |
+| `/admin/sellpages/:id` | Puck-powered editor for one page |
+| `/s/:slug` | Public sellpage — renders `publishedConfig` only |
+
+## Documentation
+
+| Document | Contents |
+| --- | --- |
+| [`docs/sellpage/ARCHITECTURE.md`](docs/sellpage/ARCHITECTURE.md) | Layers, ownership boundaries, the rules that must hold |
+| [`docs/sellpage/SCHEMA.md`](docs/sellpage/SCHEMA.md) | The page contract and how to change it safely |
+| [`docs/sellpage/HANDOFF.md`](docs/sellpage/HANDOFF.md) | Current status, what is done, what is next |
+
+## Stack
+
+React 19 · TypeScript · Vite 8 · React Router 7 · `@puckeditor/core` 0.23 ·
+vitest · oxlint
