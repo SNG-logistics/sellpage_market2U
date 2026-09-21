@@ -5,6 +5,7 @@ import { Render } from '@puckeditor/core/rsc'
 import type { CSSProperties } from 'react'
 import { puckConfig } from '../blocks'
 import type { SellpageData, SellpageTheme } from '../schemas/sellpage.types'
+import '../styles/sellpage.css'
 
 type Props = {
   data: SellpageData

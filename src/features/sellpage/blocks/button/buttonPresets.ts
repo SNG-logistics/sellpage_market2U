@@ -25,6 +25,7 @@ const buttonPresetIds = [
   'luxuryGold',
   'blackGold',
   'darkGlass',
+  'whiteGlass',
   'vipGold',
 ] as const
 
@@ -76,6 +77,14 @@ export const buttonPresets: Record<ButtonPresetId, ButtonPresetTokens> = {
     shadow: '0 8px 24px rgba(0,0,0,0.35)',
     extra: { backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' },
   },
+  whiteGlass: {
+    background: 'rgba(255,255,255,0.65)',
+    textColor: '#14201d',
+    border: '1px solid rgba(255,255,255,0.85)',
+    radius: 14,
+    shadow: '0 8px 32px rgba(31,38,135,0.08)',
+    extra: { backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' },
+  },
   vipGold: {
     background: 'linear-gradient(180deg,#2a2210,#0e0d0b)',
     textColor: '#f6e27a',
@@ -99,6 +108,7 @@ export const buttonPresetOptions: { label: string; value: ButtonPresetId }[] = [
   { label: 'Luxury Gold', value: 'luxuryGold' },
   { label: 'Black Gold', value: 'blackGold' },
   { label: 'Dark Glass', value: 'darkGlass' },
+  { label: 'White Glass', value: 'whiteGlass' },
   { label: 'VIP Gold', value: 'vipGold' },
 ]
 

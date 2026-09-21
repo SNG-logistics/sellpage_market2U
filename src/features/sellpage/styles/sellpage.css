@@ -1,0 +1,94 @@
+/**
+ * Sellpage Builder — Design Tokens & Base Styles
+ */
+
+:root {
+  --sp-primary: #0f6b5c;
+  --sp-secondary: #123b33;
+  --sp-accent: #e8a317;
+  --sp-background: #faf9f5;
+  --sp-surface: #ffffff;
+  --sp-text: #14201d;
+  --sp-muted: #6b6a63;
+  --sp-radius: 12px;
+  --sp-spacing: 16px;
+  --sp-font-heading: 'Noto Sans Thai', 'Noto Sans Lao', system-ui, -apple-system, sans-serif;
+  --sp-font-body: 'Noto Sans Thai', 'Noto Sans Lao', system-ui, -apple-system, sans-serif;
+}
+
+/* Button Animations */
+
+.sp-btn-pulse {
+  animation: sp-pulse 2s infinite;
+}
+
+.sp-btn-bounce {
+  animation: sp-bounce 2s infinite;
+}
+
+.sp-btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.sp-btn-shine::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg);
+  animation: sp-shine 3s infinite;
+}
+
+@keyframes sp-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(15, 107, 92, 0.4);
+  }
+  70% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 10px rgba(15, 107, 92, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(15, 107, 92, 0);
+  }
+}
+
+@keyframes sp-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes sp-shine {
+  0% {
+    left: -100%;
+  }
+  20%, 100% {
+    left: 100%;
+  }
+}
+
+/* Accessibility: Respect Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .sp-btn-pulse,
+  .sp-btn-bounce,
+  .sp-btn-shine::after {
+    animation: none !important;
+  }
+}
