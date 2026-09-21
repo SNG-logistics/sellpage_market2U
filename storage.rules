@@ -1,0 +1,33 @@
+rules_version = '2';
+
+// Media for sellpages (Phase 8 media library).
+//
+// Uploads are admin-only and constrained by type and size at the boundary —
+// a client-side check on the upload form is a convenience, not a control.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(png|jpeg|jpg|gif|webp|svg\\+xml)');
+    }
+
+    function withinSizeLimit() {
+      return request.resource.size < 10 * 1024 * 1024; // 10 MB
+    }
+
+    // Published pages load these directly in the browser, so read is public.
+    match /sellpages/{pageId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && withinSizeLimit();
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

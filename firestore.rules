@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Market2U sellpages.
+//
+// Threat model: the admin UI is a browser app, so nothing it does can be
+// trusted. These rules are the real boundary.
+//
+// - Anyone may read a page that is actually published, and only the published
+//   half of it is useful to them. Draft-only pages are not readable at all.
+// - Only a signed-in admin (custom claim `admin: true`, set server-side with
+//   the Admin SDK) may create, change or delete anything.
+// - Version snapshots are admin-only in both directions; the public page never
+//   needs them.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isPublished(page) {
+      return page.status == 'published' && page.publishedConfig != null;
+    }
+
+    // Fields a client must never be able to forge or rewrite.
+    function immutableIdentity(existing, incoming) {
+      return incoming.id == existing.id;
+    }
+
+    match /sellpages/{pageId} {
+      // Public read is limited to pages that are live. A draft is invisible
+      // until it has been published at least once.
+      allow get: if isAdmin() || isPublished(resource.data);
+
+      // Listing is admin-only: the public site looks pages up by slug via a
+      // single-document query, and an open list would expose every page's
+      // name, slug and status.
+      allow list: if isAdmin();
+
+      allow create: if isAdmin()
+                    && request.resource.data.id == pageId
+                    && request.resource.data.schemaVersion is int;
+
+      allow update: if isAdmin()
+                    && immutableIdentity(resource.data, request.resource.data)
+                    && request.resource.data.schemaVersion is int;
+
+      allow delete: if isAdmin();
+
+      match /versions/{versionId} {
+        allow read, write: if isAdmin();
+      }
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

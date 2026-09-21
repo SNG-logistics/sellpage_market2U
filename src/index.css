@@ -148,6 +148,78 @@ body {
   cursor: default;
 }
 
+/* --- Auth --- */
+
+.sp-dev-banner {
+  background: #fdf3d8;
+  color: #7a5b06;
+  border-bottom: 1px solid #f5e0a0;
+  padding: 8px 16px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.sp-signin {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.sp-signin__card {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid #e2e0da;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sp-signin__card h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.sp-signin__card label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #55534c;
+}
+
+.sp-signin__card input {
+  padding: 10px 12px;
+  border: 1px solid #d8d6cf;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.sp-signin__card button {
+  margin-top: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #0f6b5c;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sp-signin__card button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sp-signin__error {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #8a1f1f;
+}
+
 /* --- Shared field controls --- */
 
 .sp-color-field {
