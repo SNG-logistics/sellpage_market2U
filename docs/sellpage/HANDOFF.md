@@ -2,58 +2,91 @@
 
 Update this file at the end of your working session. Read it at the start.
 
-**Last updated:** 2026-09-22 · **By:** Agent B (Frontend / Sellpage Blocks / Builder UI)
+**Last updated:** 2026-09-22 · **By:** Agent A (core)
 
 ## Repository state
 
-- Branch `main`.
-- All tests passing (37 passed), oxlint (0 errors, 0 warnings), tsc clean.
+- Branch `main`, 6 commits, **not yet pushed** to `origin`.
+- `tsc -b` clean · oxlint 0 warnings · vitest **37/37** · `vite build` passes.
 
-## Agent B — status
+## Agent A — status
+
+### Completed
+
+| Task | State |
+| --- | --- |
+| A1 Puck core | `@puckeditor/core` 0.23.0, API read from the installed `.d.ts`. |
+| A2 Page contract | `schemas/sellpage.types.ts` — document, data, theme, SEO, settings, version, `PublishedSellpage`, defaults. |
+| A3 Shared renderer | One `blocks/index.ts` config + one `SellpageRenderer` for admin preview and public page. |
+| A4 Service layer | All page/version functions; storage behind `SellpageStorageAdapter`. |
+| A5 Draft/publish | Enforced in the service layer, covered by tests. |
+| A6 Autosave | 1200 ms debounce, 4 states, stale-response guard. |
+| A7 Versions | Snapshot per publish incl. `schemaVersion` + theme/seo/settings. Restore → draft only. |
+| A8 Public routing | `/s/:slug` → `getPublishedPageBySlug` → `FallbackPage`. Never blank. |
+| A9 Migration | Ordered steps, `migrateToCurrent`, and a test that fails the build if the version is bumped without a step. |
+| **A10 Firebase** | **Done.** Config, Firestore adapter, auth + admin claim, `/admin/*` guard, `firestore.rules`, `storage.rules`, `.env.example`. |
+
+### A10 notes
+
+- **Firebase is optional.** With no `VITE_FIREBASE_*` vars the app runs in
+  local mode on localStorage and shows a banner saying admin pages are
+  unprotected. `npm run dev` works with no Firebase project.
+- **The rules are the security boundary**, not `RequireAdmin`. Public `get`
+  is allowed only on genuinely published pages; `list` is admin-only; every
+  write needs the `admin` custom claim.
+- **Admin claim is server-side only** — set it with the Admin SDK. The UI
+  reads the same claim off the ID token, so UI and rules cannot drift.
+
+### Still to do before a real deployment
+
+1. Create the Firebase project; fill `.env.local` from `.env.example`.
+2. Deploy `firestore.rules` and `storage.rules`.
+3. Grant `admin: true` to the first user via the Admin SDK.
+4. Until 1–3 are done, do not expose the site publicly — local mode has no auth.
+
+## What B and C can rely on
+
+- **Import page types from `schemas/sellpage.types.ts` only.** Do not declare
+  your own page/config types.
+- **Register every block in `blocks/index.ts`** — that registry is what both
+  the editor and the public renderer consume.
+- **Do not write `published*` fields.** Only `publishPage()` may.
+- **Never call a database directly** — go through `sellpageService`.
+- **Sanitize user input before rendering**: `safeUrl`, `safeImageUrl`,
+  `safeColor`, `safeCssValue` in `utils/safeUrl.ts`.
+- **Never add a drag-and-drop library.** Puck owns drag/drop/nesting.
+- **Watch the bundle boundary.** Two modules would drag huge dependencies
+  onto the public sellpage if imported from shared code:
+  - Puck's editor UI (e.g. `FieldLabel`) — bundled with the whole editor.
+  - `lib/firebase.ts` — pulls the ~557 KB SDK. To check whether Firebase is
+    configured, import `lib/firebaseConfig.ts` instead (no SDK).
+  Current entry: 303 KB raw / 96 KB gzip. Keep it there.
+
+## Agent B — status (from B's own session)
 
 ### Completed by Agent B
 
 | Task | State |
 | --- | --- |
-| Task B3 Button System Presets | Added `whiteGlass` preset to `buttonPresets.ts`. Full list of presets supported: Solid, Outline, Soft, Glass, Gradient, Shadow, 3D, Neon, Minimal, Pill, Luxury Gold, Black Gold, Dark Glass, White Glass, VIP Gold. |
-| Task B4 Social Button | Registered SVG icons and expanded `SocialButton.tsx` to support 10 platforms (LINE, WhatsApp, Telegram, Facebook, TikTok, Instagram, YouTube, Website, Phone, Email) with default brand colors/icons and admin override options. |
-| Task B5 Hero block | Expanded `Hero.tsx` props: logo, title, subtitle, description, solid/gradient/image background types, overlay color, alignment (left/center/right), minHeight, primaryCTA & secondaryCTA buttons. |
+| B3 Button presets | Added `whiteGlass`; 15 presets total. |
+| B4 Social Button | 10 networks with brand colours/icons, still reusing `renderButton`. |
+| B5 Hero block | Logo, description, solid/gradient/image backgrounds, overlay, alignment, minHeight, primary + secondary CTAs. |
 
-### Pending / Paused
+Committed by Agent A in `405558f` after verification.
 
-| Task | State |
-| --- | --- |
-| Task B1 Basic Blocks Polish | Pending |
-| Task B6 Stats block | Pending |
-| Task B7 Alert block | Pending |
-| Task B8 & B9 Builder UI | Pending |
-| Task B10 Theme & Design Tokens | Pending |
-| Task B11 & B12 Responsive & Viewports | Pending |
+### Pending for Agent B
 
-### Blocked
+B1 basic blocks polish · B6 Stats · B7 Alert · B8/B9 Builder UI ·
+B10 theme & design tokens · B11/B12 responsive & viewports.
 
-- Paused per user instruction ("หยุดก่อน ให้ agent A ทำก่อน").
+Nothing in Agent A's area blocks these — the contract, renderer, service
+layer and theme type are all in place.
 
-## Agent B current summary
+## Known gaps / debt
 
-```text
-Agent B current status: Paused (waiting for Agent A)
-Available contracts from Agent A:
-- Page contract types (`schemas/sellpage.types.ts`)
-- Block registry contract (`blocks/index.ts`)
-- Single renderer (`renderer/SellpageRenderer.tsx`)
-- Storage adapter service (`services/sellpageService.ts`)
-- URL/color sanitizers (`utils/safeUrl.ts`)
-
-Completed:
-- Added whiteGlass preset to Button system (`buttonPresets.ts`)
-- Added SVG icons for 10 social networks (`buttonIcons.tsx`, `buttonIconRegistry.ts`)
-- Updated SocialButton block (`SocialButton.tsx`) to support LINE, WhatsApp, Telegram, Facebook, TikTok, Instagram, YouTube, Website, Phone, Email with admin overrides
-- Updated Hero block (`Hero.tsx`) with logo, description, background types (solid/gradient/image), alignment, minHeight, primary & secondary CTAs
-
-Pending:
-- Remaining Agent B tasks (B1, B6, B7, B8, B9, B10, B11, B12)
-
-Next exact task:
-- Wait for Agent A, then resume Agent B pending tasks.
-```
+- No Firebase project configured yet, so the Firestore adapter is written
+  but has never run against a live database.
+- Tracking pixel ids are stored in settings but not yet emitted publicly.
+- `restoreVersion` migrates a snapshot's `config`; theme/seo/settings
+  snapshots restore as-is (no migration steps exist for them yet).
+- Media library (Phase 8) not started; `storage.rules` is ready for it.
