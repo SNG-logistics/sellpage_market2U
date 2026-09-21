@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { colorField } from '../fields'
-import { safeColor, safeCssValue } from '../../utils/safeUrl'
+import { safeBackground, safeColor, safeCssValue } from '../../utils/safeUrl'
 
 export type AlertPreset = 'info' | 'success' | 'warning' | 'security' | 'vip'
 
@@ -54,7 +54,7 @@ export const alertConfig: ComponentConfig<AlertProps> = {
   },
   render: ({ title, description, variant, background, textColor, border, radius }) => {
     const tokens = variantTokens[variant] ?? variantTokens.info
-    const bg = safeColor(background) ?? safeCssValue(background) ?? tokens.background
+    const bg = safeBackground(background) ?? tokens.background
     const color = safeColor(textColor) ?? tokens.textColor
     const borderStyle = safeCssValue(border) ?? tokens.border
 

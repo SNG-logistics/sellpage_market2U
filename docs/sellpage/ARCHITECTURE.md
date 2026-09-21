@@ -57,6 +57,23 @@ There is exactly **one** renderer and **one** block registry. Do not introduce
 what the admin previews is what the public gets after Publish, and that only
 holds while both sides run the same definitions.
 
+### A block change ships to every published page at once
+
+The flip side of one shared renderer: a published config is stored as data and
+re-rendered by whatever block code is currently deployed. Editing a block
+therefore changes pages nobody has reopened or republished.
+
+- **A new prop must render exactly as before when it is `undefined`.** Saved
+  pages never have it — Puck's `defaultProps` apply only to newly inserted
+  blocks. Give it a render-time fallback (`lineHeight || 1.2`); that also
+  means no schema bump.
+- **Don't change what an existing prop does by default.** Forcing every image
+  link to `target="_blank"`, or capping image height, silently rewrites live
+  pages. Add a prop that opts in instead.
+- `blocks/blocks.test.tsx` renders the prop sets saved by older versions
+  through the real renderer. When you add props to a block, add its previous
+  prop set there.
+
 ## Draft vs published
 
 | | Written by | Read by |
@@ -93,8 +110,12 @@ those in the same physical chunk as `Puck` itself, so a single import drags the
 whole editor into the public bundle. `blocks/fields.tsx` therefore builds its
 custom field UI from plain elements.
 
-Measured after these changes: public/list routes ~209 KB gzip; the editor
-route lazy-loads ~173 KB gzip more on top. (The residual ~85 KB gzip of
+The same goes for **`lib/firebase.ts`**, which pulls in the ~557 KB Firebase
+SDK. Shared code that only needs to know whether Firebase is configured imports
+`lib/firebaseConfig.ts` (no SDK) instead.
+
+Measured 2026-09-22: entry chunk 306 KB raw / 98 KB gzip; the editor route and
+the Firebase SDK each load lazily on top. (The residual ~85 KB gzip of
 tiptap/prosemirror inside Puck's own `Render` is unavoidable without forking
 Puck.)
 
@@ -106,12 +127,29 @@ Puck.)
 - Every user-supplied colour passes `safeColor()`; composite CSS (border,
   shadow) passes `safeCssValue()`, which rejects `url()`, `expression()`,
   `javascript:` and `@import`.
+- **`background` passes `safeBackground()`, never `safeCssValue()`.**
+  `safeCssValue` is a deny-list that is only sufficient because border and
+  box-shadow cannot hold an image. `background` can, without any `url(`:
+  `image-set("https://…")` takes a bare string, and `\75rl(…)` is `url(…)` after
+  CSS decodes the escape. `safeBackground` is an allow-list — a colour, or
+  exactly one gradient, no quotes or backslashes. Image backgrounds go through
+  their own `safeImageUrl()` field (see Hero), not through a free-text value.
 - Block content is rendered as React children — never `dangerouslySetInnerHTML`.
   The page contract has no raw-HTML field, deliberately (see SCHEMA.md).
 - `usePageHead` writes head tags with `setAttribute`, never `innerHTML`.
 
 ## Still open
 
-- **Firebase**: not installed. Auth, Firestore rules and Storage are unbuilt;
-  `userId` is threaded through every service call and currently passed `null`.
-- **Admin auth**: the `/admin/*` routes are unguarded.
+Firebase (project `market2u-b5f15`) is built — config, Firestore adapter, auth,
+the `/admin/*` guard, `firestore.rules`, `storage.rules` — but **nothing has
+been deployed or run against a live database**. Before exposing this publicly:
+
+1. Deploy the rules: `firebase deploy --only firestore:rules,storage`.
+2. Enable the Google sign-in provider in the console, or the button returns
+   `auth/operation-not-allowed`.
+3. Grant a user the `admin` claim; until then nobody can write to Firestore.
+   That needs the Admin SDK and a service-account key — a real secret, which
+   must never go in `.env.local` or the repo.
+
+Firebase stays optional: with no `VITE_FIREBASE_*` vars the app runs on
+localStorage and shows an "unprotected" banner.

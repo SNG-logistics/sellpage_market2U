@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { alignOptions, colorField } from '../fields'
-import { safeColor, safeCssValue, safeImageUrl } from '../../utils/safeUrl'
+import { safeBackground, safeColor, safeImageUrl } from '../../utils/safeUrl'
 import { renderButton, type ButtonProps } from '../button/Button'
 import type { Align } from '../fields'
 
@@ -91,11 +91,11 @@ export const heroConfig: ComponentConfig<HeroProps> = {
   render: (props) => {
     const logoUrl = safeImageUrl(props.logo)
     const bgImgUrl = safeImageUrl(props.backgroundImage)
-    const overlayVal = safeColor(props.overlay) ?? safeCssValue(props.overlay) ?? 'rgba(0,0,0,0.35)'
+    const overlayVal = safeBackground(props.overlay) ?? 'rgba(0,0,0,0.35)'
     const isCenter = props.alignment === 'center'
     const isRight = props.alignment === 'right'
 
-    let backgroundStyle = safeColor(props.background) ?? safeCssValue(props.background) ?? 'linear-gradient(135deg,#0f6b5c,#123b33)'
+    let backgroundStyle = safeBackground(props.background) ?? 'linear-gradient(135deg,#0f6b5c,#123b33)'
 
     if (props.bgType === 'image' && bgImgUrl) {
       backgroundStyle = `#14201d url(${bgImgUrl}) center/cover no-repeat`

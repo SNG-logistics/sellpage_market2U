@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeColor, safeCssValue, safeImageUrl, safeUrl } from './safeUrl'
+import { safeBackground, safeColor, safeCssValue, safeImageUrl, safeUrl } from './safeUrl'
 
 describe('safeUrl', () => {
   it('allows http/https/mailto/tel/line URLs', () => {
@@ -79,5 +79,52 @@ describe('safeCssValue', () => {
     expect(safeCssValue('@import "evil.css"')).toBeUndefined()
     expect(safeCssValue('')).toBeUndefined()
     expect(safeCssValue(null)).toBeUndefined()
+  })
+})
+
+describe('safeBackground', () => {
+  it('accepts a plain colour', () => {
+    expect(safeBackground('#0f6b5c')).toBe('#0f6b5c')
+    expect(safeBackground('rgba(0,0,0,0.35)')).toBe('rgba(0,0,0,0.35)')
+  })
+
+  it('accepts a single gradient, including nested colour functions', () => {
+    for (const gradient of [
+      'linear-gradient(135deg, #0f6b5c, #123b33)',
+      'linear-gradient(to right, rgba(0,0,0,0.6) 0%, transparent 100%)',
+      'radial-gradient(circle at 50% 50%, #fff, #000)',
+      'repeating-linear-gradient(45deg, #fff 0 10px, #eee 10px 20px)',
+      'conic-gradient(from 90deg, hsl(200 50% 50%), hsl(20 50% 50%))',
+      'linear-gradient(var(--sp-primary), var(--sp-accent))',
+    ]) {
+      expect(safeBackground(gradient)).toBe(gradient)
+    }
+  })
+
+  it('rejects every way of loading a remote image — not only url()', () => {
+    // A bare string is a URL inside image-set(), so there is no `url(` to catch.
+    expect(safeBackground('image-set("https://evil.example/t.gif" 1x)')).toBeUndefined()
+    // CSS decodes \75 to "u": this IS url(…) by the time the browser reads it.
+    expect(safeBackground('\\75rl(https://evil.example/t.gif)')).toBeUndefined()
+    expect(safeBackground('url(https://evil.example/t.gif)')).toBeUndefined()
+    expect(safeBackground('linear-gradient(#fff, #000), url(https://evil.example/t.gif)')).toBeUndefined()
+    expect(safeBackground('linear-gradient(#fff, #000), image-set("https://evil.example/t.gif" 1x)')).toBeUndefined()
+  })
+
+  it('rejects a second layer stacked after the gradient', () => {
+    expect(safeBackground('linear-gradient(#fff, #000), linear-gradient(#000, #fff)')).toBeUndefined()
+    expect(safeBackground('linear-gradient(#fff, #000) , element(#secret)')).toBeUndefined()
+  })
+
+  it('rejects everything else', () => {
+    expect(safeBackground('red; position: fixed')).toBeUndefined()
+    expect(safeBackground('linear-gradient(#fff, #000')).toBeUndefined()
+    expect(safeBackground('')).toBeUndefined()
+    expect(safeBackground(null)).toBeUndefined()
+  })
+
+  it('shows why safeCssValue must not guard a background', () => {
+    expect(safeCssValue('image-set("https://evil.example/t.gif" 1x)')).toBeDefined()
+    expect(safeCssValue('\\75rl(https://evil.example/t.gif)')).toBeDefined()
   })
 })

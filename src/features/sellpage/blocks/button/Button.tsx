@@ -2,7 +2,7 @@ import type { ComponentConfig } from '@puckeditor/core'
 import type { CSSProperties } from 'react'
 import { alignOptions, colorField, type Align } from '../fields'
 import { buttonPresetOptions, buttonPresets, isButtonPresetId, type ButtonPresetId } from './buttonPresets'
-import { safeColor, safeCssValue, safeUrl } from '../../utils/safeUrl'
+import { safeBackground, safeColor, safeCssValue, safeUrl } from '../../utils/safeUrl'
 import { buttonIconMap, buttonIconOptions } from './buttonIconRegistry'
 
 export type ButtonProps = {
@@ -38,7 +38,7 @@ export function renderButton(props: ButtonProps) {
   // Preset tokens are our own data and may hold gradients; the per-block
   // overrides are user input, so they go through the sanitizers first.
   const style: CSSProperties = {
-    background: safeColor(props.background) ?? preset.background,
+    background: safeBackground(props.background) ?? preset.background,
     color: safeColor(props.textColor) ?? preset.textColor,
     border: safeCssValue(props.border) ?? preset.border,
     borderRadius: props.radius ?? preset.radius,

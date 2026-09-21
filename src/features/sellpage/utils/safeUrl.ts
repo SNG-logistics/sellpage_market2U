@@ -58,10 +58,43 @@ const CSS_RESOURCE_OR_SCRIPT = /url\s*\(|expression\s*\(|javascript:|@import/i
  * React assigns these through the style object, so a stray `;` cannot break
  * out into another declaration — but url()/expression() could still fetch a
  * remote resource from a published page, so those are rejected outright.
+ *
+ * NOT for `background` — use `safeBackground`. This is a deny-list, and it is
+ * only sufficient because border and box-shadow cannot hold an image at all.
+ * `background` can, and an image needs no `url(`: `image-set("https://…")`
+ * takes a bare string, and `\75rl(…)` is `url(…)` once CSS decodes the escape.
  */
 export const safeCssValue = (input: unknown): string | undefined => {
   if (typeof input !== 'string') return undefined
   const value = input.trim()
   if (value === '' || CSS_RESOURCE_OR_SCRIPT.test(value)) return undefined
   return value
+}
+
+// No quotes and no backslash: every way CSS has of naming a remote resource
+// other than url() — image-set(), image(), src() — needs a string, and every
+// way of disguising `url` needs an escape.
+const CSS_GRADIENT = /^(repeating-)?(linear|radial|conic)-gradient\([a-zA-Z0-9\s.,%#()/+-]+\)$/
+
+/** True when `value` is one function call — its first `(` closes on the last character, not before. */
+const isSingleCall = (value: string): boolean => {
+  let depth = 0
+  for (let i = 0; i < value.length; i++) {
+    if (value[i] === '(') depth++
+    else if (value[i] === ')' && --depth === 0 && i !== value.length - 1) return false
+  }
+  return depth === 0
+}
+
+/**
+ * For `background`: a plain colour, or exactly one gradient. An allow-list,
+ * unlike `safeCssValue`, because `background` is the one styled property that
+ * can load an image.
+ */
+export const safeBackground = (input: unknown): string | undefined => {
+  const color = safeColor(input)
+  if (color !== undefined) return color
+  if (typeof input !== 'string') return undefined
+  const value = input.trim()
+  return CSS_GRADIENT.test(value) && !CSS_RESOURCE_OR_SCRIPT.test(value) && isSingleCall(value) ? value : undefined
 }
