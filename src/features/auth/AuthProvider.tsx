@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth'
+import {
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  type User,
+} from 'firebase/auth'
 import { getFirebaseAuth, isFirebaseConfigured } from '../../lib/firebase'
 import { AuthContext, type AuthState } from './authContext'
 
@@ -35,7 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAdmin,
       configured,
-      signIn: async (email, password) => {
+      signInWithGoogle: async () => {
+        const provider = new GoogleAuthProvider()
+        // Always show the chooser: admins often have several Google accounts
+        // and silent reuse of the wrong one is confusing to recover from.
+        provider.setCustomParameters({ prompt: 'select_account' })
+        await signInWithPopup(getFirebaseAuth(), provider)
+      },
+      signInWithEmail: async (email, password) => {
         await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
       },
       signOutUser: async () => {

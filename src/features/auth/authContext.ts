@@ -7,7 +7,8 @@ export type AuthState = {
   /** True once the admin custom claim has been verified on the ID token. */
   isAdmin: boolean
   configured: boolean
-  signIn: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
+  signInWithEmail: (email: string, password: string) => Promise<void>
   signOutUser: () => Promise<void>
 }
 

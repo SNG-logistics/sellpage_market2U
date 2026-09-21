@@ -1,6 +1,25 @@
 import { useState, type ReactNode } from 'react'
 import { useAuth } from './useAuth'
 
+/** Google's mark, inline so the sign-in button needs no network fetch. */
+const GoogleMark = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <path
+      fill="#4285F4"
+      d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"
+    />
+    <path
+      fill="#34A853"
+      d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"
+    />
+    <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
+    <path
+      fill="#EA4335"
+      d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"
+    />
+  </svg>
+)
+
 /**
  * Gate for /admin/*.
  *
@@ -10,7 +29,8 @@ import { useAuth } from './useAuth'
  * Both read the same custom claim, so they cannot drift apart.
  */
 export function RequireAdmin({ children }: { children: ReactNode }) {
-  const { user, isAdmin, configured, signIn } = useAuth()
+  const { user, isAdmin, configured, signInWithGoogle, signInWithEmail } = useAuth()
+  const [showEmail, setShowEmail] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -32,15 +52,21 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   if (user === undefined) return <p style={{ padding: 24 }}>Checking sign-in…</p>
 
   if (user === null) {
-    const onSubmit = async (event: React.FormEvent) => {
-      event.preventDefault()
+    const run = async (fn: () => Promise<void>, onFail: string) => {
       setError(null)
       setBusy(true)
       try {
-        await signIn(email, password)
-      } catch {
-        // Deliberately vague: don't reveal whether the address has an account.
-        setError('Sign-in failed. Check your email and password.')
+        await fn()
+      } catch (err) {
+        // A popup the user simply closed is not an error worth shouting about.
+        const code = (err as { code?: string })?.code
+        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+          setError(null)
+        } else if (code === 'auth/operation-not-allowed') {
+          setError('Google sign-in is not enabled for this Firebase project yet.')
+        } else {
+          setError(onFail)
+        }
       } finally {
         setBusy(false)
       }
@@ -48,37 +74,72 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
 
     return (
       <div className="sp-signin">
-        <form onSubmit={onSubmit} className="sp-signin__card">
+        <div className="sp-signin__card">
           <h1>Sign in</h1>
-          <label htmlFor="sp-email">Email</label>
-          <input id="sp-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <label htmlFor="sp-password">Password</label>
-          <input
-            id="sp-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <p className="sp-signin__sub">Admin access to the Market2U sellpage builder.</p>
+
+          <button
+            type="button"
+            className="sp-signin__google"
+            disabled={busy}
+            onClick={() => run(signInWithGoogle, 'Google sign-in failed. Please try again.')}
+          >
+            <GoogleMark />
+            {busy ? 'Signing in…' : 'Sign in with Google'}
+          </button>
+
           {error ? (
             <p className="sp-signin__error" role="alert">
               {error}
             </p>
           ) : null}
-          <button type="submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+
+          {showEmail ? (
+            <form
+              className="sp-signin__email"
+              onSubmit={(e) => {
+                e.preventDefault()
+                // Deliberately vague: don't reveal whether the address has an account.
+                run(() => signInWithEmail(email, password), 'Sign-in failed. Check your email and password.')
+              }}
+            >
+              <label htmlFor="sp-email">Email</label>
+              <input id="sp-email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <label htmlFor="sp-password">Password</label>
+              <input
+                id="sp-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button type="submit" disabled={busy}>
+                {busy ? 'Signing in…' : 'Sign in with email'}
+              </button>
+            </form>
+          ) : (
+            <button type="button" className="sp-signin__alt" onClick={() => setShowEmail(true)}>
+              Use email and password instead
+            </button>
+          )}
+        </div>
       </div>
     )
   }
 
   if (!isAdmin) {
     return (
-      <div style={{ padding: 24 }}>
-        <h1 style={{ fontSize: 20 }}>Not authorised</h1>
-        <p style={{ color: '#6b6a63' }}>This account does not have admin access to the sellpage builder.</p>
+      <div className="sp-signin">
+        <div className="sp-signin__card">
+          <h1>Not authorised</h1>
+          <p className="sp-signin__sub">
+            Signed in as {user.email ?? 'this account'}, but it does not have admin access to the sellpage builder.
+          </p>
+          <p className="sp-signin__sub">
+            An existing admin needs to grant the <code>admin</code> claim to this account.
+          </p>
+        </div>
       </div>
     )
   }

@@ -294,8 +294,58 @@ body {
 }
 
 .sp-signin__card h1 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-size: 20px;
+}
+
+.sp-signin__sub {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #6b6a63;
+}
+
+.sp-signin__google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border: 1px solid #d8d6cf;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #14201d;
+  cursor: pointer;
+}
+
+.sp-signin__google:hover:not(:disabled) {
+  background: #f5f4f0;
+}
+
+.sp-signin__google:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sp-signin__alt {
+  margin-top: 4px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #0f6b5c;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sp-signin__email {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #eeece5;
 }
 
 .sp-signin__card label {
