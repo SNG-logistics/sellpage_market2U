@@ -148,6 +148,120 @@ body {
   cursor: default;
 }
 
+/* --- Theme panel --- */
+
+.sp-btn-theme {
+  border: 1px solid #d8d6cf;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sp-btn-theme[aria-pressed='true'] {
+  background: #eeece5;
+}
+
+.sp-theme {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  z-index: 60;
+  overflow-y: auto;
+  background: #fff;
+  border-left: 1px solid #e2e0da;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sp-theme__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sp-theme__head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.sp-theme__head button {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6b6a63;
+}
+
+.sp-theme__hint {
+  margin: -12px 0 0;
+  font-size: 12px;
+  color: #6b6a63;
+}
+
+.sp-theme h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #6b6a63;
+}
+
+.sp-theme__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.sp-theme__row > span {
+  font-weight: 600;
+  color: #55534c;
+}
+
+.sp-theme__row input[type='text'],
+.sp-theme__row input[type='number'],
+.sp-theme__row select {
+  padding: 7px 9px;
+  border: 1px solid #d8d6cf;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.sp-theme__color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-theme__color input[type='color'] {
+  width: 34px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: 1px solid #d8d6cf;
+  border-radius: 6px;
+}
+
+.sp-theme__reset {
+  margin-top: auto;
+  padding: 9px 14px;
+  border: 1px solid #d8d6cf;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 /* --- Auth --- */
 
 .sp-dev-banner {
