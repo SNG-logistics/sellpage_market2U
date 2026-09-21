@@ -1,0 +1,206 @@
+:root {
+  color-scheme: light;
+  font-family: 'Noto Sans Thai', 'Noto Sans Lao', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f5f4f0;
+  color: #14201d;
+}
+
+/* --- Admin shell --- */
+
+.sp-admin-page {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.sp-admin-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.sp-admin-page__new {
+  display: flex;
+  gap: 8px;
+}
+
+.sp-admin-page__new input {
+  padding: 8px 12px;
+  border: 1px solid #d8d6cf;
+  border-radius: 8px;
+}
+
+.sp-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.sp-table th,
+.sp-table td {
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eeece5;
+  font-size: 14px;
+}
+
+.sp-table__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sp-status {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.sp-status--draft {
+  background: #fdf3d8;
+  color: #7a5b06;
+}
+
+.sp-status--published {
+  background: #e5f6ee;
+  color: #0b5c34;
+}
+
+.sp-status--unpublished {
+  background: #eeece5;
+  color: #55534c;
+}
+
+.sp-danger {
+  color: #8a1f1f;
+}
+
+.sp-empty {
+  color: #6b6a63;
+}
+
+/* --- Builder header --- */
+
+.sp-builder {
+  height: 100vh;
+}
+
+.sp-builder__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sp-autosave {
+  font-size: 13px;
+  color: #6b6a63;
+}
+
+.sp-autosave--error {
+  color: #8a1f1f;
+  font-weight: 600;
+}
+
+.sp-publish-error {
+  font-size: 13px;
+  color: #8a1f1f;
+}
+
+.sp-btn-back,
+.sp-btn-publish {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sp-btn-back {
+  background: transparent;
+  color: #14201d;
+}
+
+.sp-btn-publish {
+  background: #0f6b5c;
+  color: #fff;
+}
+
+.sp-btn-publish:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* --- Shared field controls --- */
+
+.sp-color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sp-color-field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #55534c;
+}
+
+.sp-color-field__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sp-color-field input[type='color'] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d8d6cf;
+  border-radius: 6px;
+}
+
+.sp-color-field input[type='text'] {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #d8d6cf;
+  border-radius: 6px;
+}
+
+/* --- Button animations --- */
+
+@keyframes sp-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes sp-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes sp-shine {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+  100% { filter: brightness(1); }
+}
+
+.sp-btn-pulse { animation: sp-pulse 1.6s ease-in-out infinite; }
+.sp-btn-bounce { animation: sp-bounce 1.2s ease-in-out infinite; }
+.sp-btn-shine { animation: sp-shine 1.8s ease-in-out infinite; }
