@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { colorField } from '../fields'
-import { safeImageUrl } from '../../utils/safeUrl'
+import { safeColor, safeImageUrl } from '../../utils/safeUrl'
 import { renderButton, type ButtonProps } from '../button/Button'
 
 export type HeroProps = {
@@ -68,10 +68,10 @@ export const heroConfig: ComponentConfig<HeroProps> = {
           backgroundImage: bg ? `url(${bg})` : undefined,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          color: textColor || '#ffffff',
+          color: safeColor(textColor) ?? '#ffffff',
         }}
       >
-        {bg ? <div style={{ position: 'absolute', inset: 0, background: overlayColor || 'rgba(0,0,0,0.35)' }} /> : null}
+        {bg ? <div style={{ position: 'absolute', inset: 0, background: safeColor(overlayColor) ?? 'rgba(0,0,0,0.35)' }} /> : null}
         <div style={{ position: 'relative', maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {eyebrow ? <div style={{ fontSize: 13, letterSpacing: 1, textTransform: 'uppercase', opacity: 0.85 }}>{eyebrow}</div> : null}
           <h1 style={{ margin: 0, fontSize: 44, lineHeight: 1.1 }}>{title}</h1>

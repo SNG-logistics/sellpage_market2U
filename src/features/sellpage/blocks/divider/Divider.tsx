@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { colorField } from '../fields'
+import { safeColor } from '../../utils/safeUrl'
 
 export type DividerProps = { color: string; thickness: number; margin: number }
 
@@ -12,6 +13,6 @@ export const dividerConfig: ComponentConfig<DividerProps> = {
   },
   defaultProps: { color: '', thickness: 1, margin: 16 },
   render: ({ color, thickness, margin }) => (
-    <hr style={{ border: 'none', borderTop: `${thickness}px solid ${color || '#e2e0da'}`, margin: `${margin}px 0` }} />
+    <hr style={{ border: 'none', borderTop: `${thickness}px solid ${safeColor(color) ?? '#e2e0da'}`, margin: `${margin}px 0` }} />
   ),
 }

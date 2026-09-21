@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { alignOptions, colorField, type Align } from '../fields'
+import { safeColor } from '../../utils/safeUrl'
 
 export type HeadingProps = {
   text: string
@@ -42,6 +43,6 @@ export const headingConfig: ComponentConfig<HeadingProps> = {
     fontWeight: 700,
   },
   render: ({ text, level: Level, align, color, fontSize, fontWeight }) => (
-    <Level style={{ margin: 0, textAlign: align, color: color || undefined, fontSize, fontWeight }}>{text}</Level>
+    <Level style={{ margin: 0, textAlign: align, color: safeColor(color), fontSize, fontWeight }}>{text}</Level>
   ),
 }

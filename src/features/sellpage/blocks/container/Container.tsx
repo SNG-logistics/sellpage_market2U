@@ -1,5 +1,6 @@
 import type { ComponentConfig, Slot } from '@puckeditor/core'
 import { colorField } from '../fields'
+import { safeColor } from '../../utils/safeUrl'
 
 export type ContainerProps = {
   content: Slot
@@ -50,7 +51,7 @@ export const containerConfig: ComponentConfig<ContainerProps> = {
         flexWrap: 'wrap',
         gap,
         padding,
-        background: background || undefined,
+        background: safeColor(background),
         borderRadius: radius,
         maxWidth: maxWidth > 0 ? maxWidth : undefined,
         marginInline: maxWidth > 0 ? 'auto' : undefined,

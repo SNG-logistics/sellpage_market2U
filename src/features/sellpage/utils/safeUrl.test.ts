@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeColor, safeImageUrl, safeUrl } from './safeUrl'
+import { safeColor, safeCssValue, safeImageUrl, safeUrl } from './safeUrl'
 
 describe('safeUrl', () => {
   it('allows http/https/mailto/tel/line URLs', () => {
@@ -13,6 +13,11 @@ describe('safeUrl', () => {
   it('allows relative paths and in-page anchors', () => {
     expect(safeUrl('/checkout')).toBe('/checkout')
     expect(safeUrl('#pricing')).toBe('#pricing')
+  })
+
+  it('preserves hyphens in domains and paths (regression)', () => {
+    expect(safeUrl('https://my-site.com/summer-sale')).toBe('https://my-site.com/summer-sale')
+    expect(safeUrl('/summer-sale')).toBe('/summer-sale')
   })
 
   it('rejects javascript:, data:, vbscript: and malformed input', () => {
@@ -58,5 +63,21 @@ describe('safeColor', () => {
     expect(safeColor('url(javascript:alert(1))')).toBeUndefined()
     expect(safeColor('red; background:url(x)')).toBeUndefined()
     expect(safeColor(123)).toBeUndefined()
+  })
+})
+
+describe('safeCssValue', () => {
+  it('accepts composite border/shadow values', () => {
+    expect(safeCssValue('1px solid #000')).toBe('1px solid #000')
+    expect(safeCssValue('0 6px 18px rgba(0,0,0,0.35)')).toBe('0 6px 18px rgba(0,0,0,0.35)')
+  })
+
+  it('rejects values that would fetch a remote resource or run script', () => {
+    expect(safeCssValue('url(https://evil.com/track.png)')).toBeUndefined()
+    expect(safeCssValue('url (https://evil.com/x)')).toBeUndefined()
+    expect(safeCssValue('expression(alert(1))')).toBeUndefined()
+    expect(safeCssValue('@import "evil.css"')).toBeUndefined()
+    expect(safeCssValue('')).toBeUndefined()
+    expect(safeCssValue(null)).toBeUndefined()
   })
 })

@@ -1,5 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import { alignOptions, colorField, type Align } from '../fields'
+import { safeColor } from '../../utils/safeUrl'
 
 export type TextProps = {
   content: string
@@ -23,6 +24,6 @@ export const textConfig: ComponentConfig<TextProps> = {
     fontSize: 16,
   },
   render: ({ content, align, color, fontSize }) => (
-    <p style={{ margin: 0, textAlign: align, color: color || undefined, fontSize, whiteSpace: 'pre-line' }}>{content}</p>
+    <p style={{ margin: 0, textAlign: align, color: safeColor(color), fontSize, whiteSpace: 'pre-line' }}>{content}</p>
   ),
 }

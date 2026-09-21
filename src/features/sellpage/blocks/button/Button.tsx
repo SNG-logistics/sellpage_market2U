@@ -2,7 +2,7 @@ import type { ComponentConfig } from '@puckeditor/core'
 import type { CSSProperties } from 'react'
 import { alignOptions, colorField, type Align } from '../fields'
 import { buttonPresetOptions, buttonPresets, isButtonPresetId, type ButtonPresetId } from './buttonPresets'
-import { safeUrl } from '../../utils/safeUrl'
+import { safeColor, safeCssValue, safeUrl } from '../../utils/safeUrl'
 import { buttonIconMap, buttonIconOptions } from './buttonIconRegistry'
 
 export type ButtonProps = {
@@ -35,12 +35,14 @@ export function renderButton(props: ButtonProps) {
   const href = safeUrl(props.url)
   const Icon = props.icon !== 'none' ? buttonIconMap[props.icon] : null
 
+  // Preset tokens are our own data and may hold gradients; the per-block
+  // overrides are user input, so they go through the sanitizers first.
   const style: CSSProperties = {
-    background: props.background || preset.background,
-    color: props.textColor || preset.textColor,
-    border: props.border || preset.border,
+    background: safeColor(props.background) ?? preset.background,
+    color: safeColor(props.textColor) ?? preset.textColor,
+    border: safeCssValue(props.border) ?? preset.border,
     borderRadius: props.radius ?? preset.radius,
-    boxShadow: props.shadow || preset.shadow,
+    boxShadow: safeCssValue(props.shadow) ?? preset.shadow,
     padding: `${props.padding}px ${props.padding * 1.6}px`,
     fontSize: props.fontSize,
     fontWeight: props.fontWeight,

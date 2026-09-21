@@ -23,6 +23,24 @@ const slugify = (input: string) =>
     .replace(/-+/g, '-')
     .slice(0, 80) || `page-${Date.now()}`
 
+/**
+ * Slugs must be unique — the public route resolves one page per slug
+ * (getPageBySlug returns the first match), so a collision would make a
+ * second page publicly unreachable. Appends -2, -3, … until free.
+ */
+const uniqueSlug = async (base: string, excludeId?: string): Promise<string> => {
+  let slug = base
+  for (let n = 2; await isSlugTaken(slug, excludeId); n++) {
+    slug = `${base}-${n}`
+  }
+  return slug
+}
+
+const isSlugTaken = async (slug: string, excludeId?: string): Promise<boolean> => {
+  const existing = await adapter.getBySlug(slug)
+  return existing !== null && existing.id !== excludeId
+}
+
 export const listPages = () => adapter.list()
 
 export const getPage = (id: string) => adapter.get(id)
@@ -34,7 +52,7 @@ export const createPage = async (name: string, userId: string | null): Promise<S
   const doc: SellpageDocument = {
     id: genId(),
     name,
-    slug: slugify(name),
+    slug: await uniqueSlug(slugify(name)),
     status: 'draft',
     schemaVersion: SELLPAGE_SCHEMA_VERSION,
     draftConfig: createEmptyData(),
@@ -81,15 +99,16 @@ export const publishPage = async (id: string, userId: string | null): Promise<Se
   if (!validation.ok) throw new Error(validation.errors.join(' '))
 
   const now = Date.now()
+  const previousVersion = (await adapter.listVersions(id))[0]?.version ?? 0
   const version: SellpageVersion = {
     id: genId(),
     pageId: id,
-    version: (await adapter.listVersions(id))[0]?.version ?? 0,
+    version: previousVersion + 1,
     timestamp: now,
     user: userId,
     config: doc.draftConfig,
   }
-  await adapter.saveVersion({ ...version, version: version.version + 1 })
+  await adapter.saveVersion(version)
 
   const next: SellpageDocument = {
     ...doc,
@@ -119,8 +138,11 @@ export const duplicatePage = async (id: string, userId: string | null): Promise<
     ...doc,
     id: genId(),
     name: `${doc.name} (copy)`,
-    slug: slugify(`${doc.name}-copy-${now}`),
+    slug: await uniqueSlug(slugify(`${doc.name}-copy`)),
     status: 'draft',
+    // Deep-copied: a shallow spread would leave the copy sharing the
+    // original's block tree, so editing one could mutate the other.
+    draftConfig: structuredClone(doc.draftConfig),
     publishedConfig: null,
     publishedAt: null,
     createdAt: now,
