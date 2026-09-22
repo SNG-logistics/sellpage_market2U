@@ -21,6 +21,50 @@ const GoogleMark = () => (
 )
 
 /**
+ * Firebase reports a misconfigured project as an error code and nothing else,
+ * so an admin reading "sign-in failed" has nothing to act on. Each code a
+ * setup mistake actually produces gets the step that clears it, and anything
+ * unrecognised still shows its code rather than swallowing it.
+ *
+ * The email/password codes stay deliberately vague: which half was wrong, and
+ * whether the address has an account at all, are not things to confirm to
+ * whoever is typing.
+ */
+const authErrorHelp = (code: string): string | undefined => {
+  switch (code) {
+    case 'auth/operation-not-allowed':
+      return 'Google sign-in is not enabled for this Firebase project. Enable it in Authentication → Sign-in method.'
+    case 'auth/configuration-not-found':
+      return 'This project has no Authentication set up yet. Open Authentication in the Firebase console and enable a sign-in provider.'
+    case 'auth/unauthorized-domain':
+      return `${window.location.hostname} is not listed under Authentication → Settings → Authorized domains.`
+    case 'auth/popup-blocked':
+      return 'The browser blocked the sign-in popup. Allow popups for this site, then try again.'
+    case 'auth/network-request-failed':
+      return 'The browser could not reach Firebase. Check the connection, and any VPN or content blocker.'
+    case 'auth/invalid-api-key':
+    case 'auth/api-key-not-valid':
+      return 'VITE_FIREBASE_API_KEY in .env.local is not valid for this project. Copy it again from Project settings → General.'
+    case 'auth/internal-error':
+      return 'Firebase rejected the request. Usually the Identity Toolkit API is disabled for the project, or the API key has referrer restrictions that exclude this address.'
+    case 'auth/invalid-credential':
+    case 'auth/invalid-email':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'Sign-in failed. Check the email and password.'
+    default:
+      return undefined
+  }
+}
+
+const describeAuthError = (err: unknown, fallback: string): string | null => {
+  const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: unknown }).code) : ''
+  // Closing the popup is a decision, not a failure.
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return null
+  return authErrorHelp(code) ?? (code ? `${fallback} (${code})` : fallback)
+}
+
+/**
  * Gate for /admin/*.
  *
  * This is a UX gate, not the security boundary — a determined visitor can
@@ -58,15 +102,10 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
       try {
         await fn()
       } catch (err) {
-        // A popup the user simply closed is not an error worth shouting about.
-        const code = (err as { code?: string })?.code
-        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-          setError(null)
-        } else if (code === 'auth/operation-not-allowed') {
-          setError('Google sign-in is not enabled for this Firebase project yet.')
-        } else {
-          setError(onFail)
-        }
+        // Keep the original on the console: the message below is a summary,
+        // and a stack is what you want when the summary is not enough.
+        console.error('[auth] sign-in failed', err)
+        setError(describeAuthError(err, onFail))
       } finally {
         setBusy(false)
       }
