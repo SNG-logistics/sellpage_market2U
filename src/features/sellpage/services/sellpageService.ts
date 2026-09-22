@@ -107,7 +107,12 @@ export const getPublishedPageBySlug = async (slug: string): Promise<PublishedLoo
 
 // --- Writes ----------------------------------------------------------------
 
-export const createPage = async (name: string, userId: string | null): Promise<SellpageDocument> => {
+export const createPage = async (
+  name: string,
+  userId: string | null,
+  initialData?: SellpageData,
+  initialTheme?: SellpageTheme,
+): Promise<SellpageDocument> => {
   const now = Date.now()
   const doc: SellpageDocument = {
     id: genId(),
@@ -115,8 +120,8 @@ export const createPage = async (name: string, userId: string | null): Promise<S
     slug: await uniqueSlug(slugify(name)),
     status: 'draft',
     schemaVersion: SELLPAGE_SCHEMA_VERSION,
-    draftConfig: createEmptyData(),
-    draftTheme: defaultTheme(),
+    draftConfig: initialData ?? createEmptyData(),
+    draftTheme: initialTheme ?? defaultTheme(),
     draftSeo: defaultSeo(),
     draftSettings: defaultSettings(),
     publishedConfig: null,
@@ -239,6 +244,31 @@ export const unpublishPage = async (id: string, userId: string | null): Promise<
   return next
 }
 
+/**
+ * Rebuilds a block tree with a fresh id on every block, at any nesting depth.
+ *
+ * Ids are unique within a page either way, so rendering does not need this.
+ * Tracking does: the settings already reserve pixel ids, and per-block events
+ * keyed on a block id would silently merge two different blocks that a
+ * duplicate left sharing one. Cheaper to keep ids distinct than to discover
+ * that in a report.
+ */
+const withFreshBlockIds = <T>(value: T): T => {
+  if (Array.isArray(value)) return value.map(withFreshBlockIds) as T
+  if (value === null || typeof value !== 'object') return value
+
+  const next: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(value)) next[key] = withFreshBlockIds(child)
+
+  // A Puck block is `{ type, props: { id, … } }` — only those ids are block ids.
+  const props = next.props
+  if (typeof next.type === 'string' && props !== null && typeof props === 'object') {
+    const asProps = props as Record<string, unknown>
+    if (typeof asProps.id === 'string') asProps.id = `${next.type}-${genId()}`
+  }
+  return next as T
+}
+
 export const duplicatePage = async (id: string, userId: string | null): Promise<SellpageDocument> => {
   const doc = await adapter.get(id)
   if (!doc) throw new Error(`Sellpage ${id} not found`)
@@ -250,8 +280,9 @@ export const duplicatePage = async (id: string, userId: string | null): Promise<
     slug: await uniqueSlug(slugify(`${doc.name}-copy`)),
     status: 'draft',
     // Deep-copied: a shallow spread would leave the copy sharing the
-    // original's block tree, so editing one could mutate the other.
-    draftConfig: structuredClone(doc.draftConfig),
+    // original's block tree, so editing one could mutate the other. The walk
+    // rebuilds every object, so it is the deep copy as well as the re-id.
+    draftConfig: withFreshBlockIds(doc.draftConfig),
     draftTheme: structuredClone(doc.draftTheme),
     draftSeo: structuredClone(doc.draftSeo),
     draftSettings: structuredClone(doc.draftSettings),

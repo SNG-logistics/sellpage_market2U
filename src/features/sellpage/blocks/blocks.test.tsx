@@ -410,3 +410,233 @@ describe('theme', () => {
   })
 })
 
+describe('Luxury Sellpage Blocks', () => {
+  it('TrustBar renders items and respects enabled flag', () => {
+    const { getByText, queryByText, rerender } = renderBlock('TrustBar', {
+      enabled: true,
+      items: [
+        { icon: '✓', text: 'มั่นใจ' },
+        { icon: '★', text: 'เว็บมั่นคง' },
+      ],
+      textColor: '#f5e2a3',
+      background: 'rgba(212, 175, 55, 0.12)',
+      dividerColor: 'rgba(212, 175, 55, 0.3)',
+      fontSize: 13,
+      fontWeight: 600,
+    })
+
+    expect(getByText('มั่นใจ')).toBeTruthy()
+    expect(getByText('เว็บมั่นคง')).toBeTruthy()
+
+    // Test disabled
+    rerender(
+      <SellpageRenderer
+        data={
+          {
+            root: { props: {} },
+            content: [
+              {
+                type: 'TrustBar',
+                props: {
+                  id: 'TrustBar-disabled',
+                  enabled: false,
+                  items: [{ icon: '✓', text: 'มั่นใจ' }],
+                  textColor: '',
+                  background: '',
+                  dividerColor: '',
+                  fontSize: 13,
+                  fontWeight: 600,
+                },
+              },
+            ],
+          } as unknown as SellpageData
+        }
+        theme={defaultTheme()}
+      />
+    )
+    expect(queryByText('มั่นใจ')).toBeNull()
+  })
+
+  it('OnlineCounter renders prefix, the entered count, and suffix', () => {
+    const { getByText } = renderBlock('OnlineCounter', {
+      enabled: true,
+      prefix: 'ลูกค้าไว้วางใจแล้ว',
+      number: 3500,
+      suffix: 'ราย',
+      iconType: 'users',
+      background: '',
+      border: '',
+      textColor: '',
+      numberColor: '',
+      radius: 20,
+      align: 'center',
+    })
+
+    expect(getByText('ลูกค้าไว้วางใจแล้ว')).toBeTruthy()
+    expect(getByText('3,500')).toBeTruthy()
+    expect(getByText('ราย')).toBeTruthy()
+  })
+
+  it('OnlineCounter ships a default that claims nothing on the seller behalf', () => {
+    // It used to default to a random 1,800–3,200 under "ออนไลน์ตอนนี้", i.e. a
+    // live audience figure nobody measured. A block dropped on a page must
+    // start from a number the seller then fills in themselves.
+    const defaults = puckConfig.components.OnlineCounter.defaultProps as Record<string, unknown>
+    expect(defaults.number).toBe(0)
+    expect(String(defaults.prefix)).not.toContain('ออนไลน์')
+    expect(defaults).not.toHaveProperty('mode')
+  })
+
+  it('BrandHero renders title, subtitle, and description', () => {
+    const { getByText } = renderBlock('BrandHero', {
+      logo: '',
+      logoWidth: 140,
+      title: 'ติดต่อแอดมิน VIP',
+      subtitle: 'บริการตลอด 24 ชั่วโมง',
+      description: 'สมัครสมาชิก ฝาก-ถอน สะดวก รวดเร็ว',
+      alignment: 'center',
+      titleColor: '',
+      subtitleColor: '',
+      descriptionColor: '',
+      paddingTop: 20,
+      paddingBottom: 20,
+      background: '',
+      backgroundImage: '',
+      overlay: '',
+    })
+
+    expect(getByText('ติดต่อแอดมิน VIP')).toBeTruthy()
+    expect(getByText('บริการตลอด 24 ชั่วโมง')).toBeTruthy()
+    expect(getByText(/สมัครสมาชิก ฝาก-ถอน สะดวก รวดเร็ว/)).toBeTruthy()
+  })
+
+  it('PromoCard renders title, subtitle, description, and link', () => {
+    const { getByText, getByRole } = renderBlock('PromoCard', {
+      title: '3KING VIP',
+      subtitle: 'บริการพิเศษเฉพาะคุณ',
+      description: 'ปลอดภัย มั่นคง ฝากถอนได้ทันที',
+      image: '',
+      imagePosition: 'right',
+      url: 'https://example.com/vip',
+      openTarget: '_blank',
+      preset: 'blackGold',
+      customBackground: '',
+      textColor: '',
+      borderColor: '',
+      radius: 14,
+      showArrow: true,
+      shadow: '',
+    })
+
+    expect(getByText('3KING VIP')).toBeTruthy()
+    expect(getByText('บริการพิเศษเฉพาะคุณ')).toBeTruthy()
+    expect(getByText('ปลอดภัย มั่นคง ฝากถอนได้ทันที')).toBeTruthy()
+    const link = getByRole('link')
+    expect(link.getAttribute('href')).toBe('https://example.com/vip')
+    expect(link.getAttribute('target')).toBe('_blank')
+  })
+
+  it('SocialLinksSection renders all configured social platform buttons', () => {
+    const { getByText } = renderBlock('SocialLinksSection', {
+      links: [
+        { platform: 'whatsapp', title: 'WhatsApp VIP', subtitle: 'แชตทันที', url: 'https://whatsapp.com' },
+        { platform: 'line', title: 'LINE Official', subtitle: 'แอดไลน์สอบถาม', url: 'https://line.me' },
+      ],
+      gap: 12,
+      radius: 14,
+      showArrow: true,
+      hoverEffect: 'lift',
+    })
+
+    expect(getByText('WhatsApp VIP')).toBeTruthy()
+    expect(getByText('แชตทันที')).toBeTruthy()
+    expect(getByText('LINE Official')).toBeTruthy()
+    expect(getByText('แอดไลน์สอบถาม')).toBeTruthy()
+  })
+
+  it('StatsSection renders statistics items with values and labels', () => {
+    const { getByText } = renderBlock('StatsSection', {
+      items: [
+        { value: '50,000+', label: 'ผู้ใช้งาน', icon: '👥' },
+        { value: '24/7', label: 'ทีมงานดูแล', icon: '⚡' },
+        { value: '100%', label: 'ความปลอดภัย', icon: '🛡️' },
+      ],
+      columns: 3,
+      background: '',
+      border: '',
+      showDivider: true,
+      dividerColor: '',
+      radius: 16,
+      padding: 16,
+      valueColor: '',
+      labelColor: '',
+    })
+
+    expect(getByText('50,000+')).toBeTruthy()
+    expect(getByText('ผู้ใช้งาน')).toBeTruthy()
+    expect(getByText('24/7')).toBeTruthy()
+    expect(getByText('100%')).toBeTruthy()
+  })
+
+  it('SecurityNotice renders heading, description, and warning highlight', () => {
+    const { getByText } = renderBlock('SecurityNotice', {
+      preset: 'securityGold',
+      icon: '🛡️',
+      heading: 'ระบบความปลอดภัยและแจ้งเตือน',
+      description: 'ทางเราไม่มีนโยบายทักหาลูกค้าก่อน',
+      warningText: 'โปรดระวังบัญชีปลอม',
+      customBackground: '',
+      customBorder: '',
+      titleColor: '',
+      textColor: '',
+      radius: 12,
+    })
+
+    expect(getByText('ระบบความปลอดภัยและแจ้งเตือน')).toBeTruthy()
+    expect(getByText('ทางเราไม่มีนโยบายทักหาลูกค้าก่อน')).toBeTruthy()
+    expect(getByText('โปรดระวังบัญชีปลอม')).toBeTruthy()
+  })
+
+  it('MainCTA renders button text, subtitle, and valid link', () => {
+    const { getByRole, getByText } = renderBlock('MainCTA', {
+      text: 'เข้าสู่เว็บไซต์ทันที',
+      subtitle: 'คลิกเพื่อลงทะเบียน',
+      url: 'https://market2u.example.com',
+      openTarget: '_blank',
+      icon: 'arrowRight',
+      preset: 'gold',
+      fullWidth: true,
+      customBackground: '',
+      customTextColor: '',
+      radius: 14,
+      customShadow: '',
+      animation: 'pulse',
+    })
+
+    expect(getByText('เข้าสู่เว็บไซต์ทันที')).toBeTruthy()
+    expect(getByText('คลิกเพื่อลงทะเบียน')).toBeTruthy()
+    const link = getByRole('link')
+    expect(link.getAttribute('href')).toBe('https://market2u.example.com/')
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.className).toContain('sp-main-cta--pulse')
+  })
+
+  it('createLuxuryContactTemplate renders full luxury page without errors', async () => {
+    const { createLuxuryContactTemplate } = await import('../templates/luxuryContactTemplate')
+    const template = createLuxuryContactTemplate()
+
+    expect(template.name).toBe('Market2U Luxury Contact')
+    expect(template.data.content.length).toBe(8)
+
+    const { getByText } = render(<SellpageRenderer data={template.data} theme={template.theme} />)
+    expect(getByText('มั่นใจ')).toBeTruthy()
+    expect(getByText('ติดต่อแอดมิน')).toBeTruthy()
+    expect(getByText('YOUR BRAND VIP')).toBeTruthy()
+    expect(getByText('WhatsApp')).toBeTruthy()
+    expect(getByText('10,000+')).toBeTruthy()
+    expect(getByText('ระบบความปลอดภัยและแจ้งเตือนมิจฉาชีพ')).toBeTruthy()
+    expect(getByText('เข้าสู่เว็บไซต์หลัก')).toBeTruthy()
+  })
+})
+
+
