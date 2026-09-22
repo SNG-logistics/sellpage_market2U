@@ -171,6 +171,30 @@ describe('media library', () => {
     expect(screen.getByText(/in published page/)).toBeTruthy()
   })
 
+  it('filters by name, and says so when nothing matches', async () => {
+    setMediaStorageAdapter(fakeAdapter([item('banner.png'), item('logo.png')]))
+    render(<Harness media={media()} />)
+    await open()
+    await screen.findByLabelText('Use banner.png')
+
+    const search = screen.getByRole('searchbox')
+    fireEvent.change(search, { target: { value: 'logo' } })
+    expect(screen.queryByLabelText('Use banner.png')).toBeNull()
+    expect(screen.getByLabelText('Use logo.png')).toBeTruthy()
+
+    // An empty grid would read as "the library is gone", not "no matches".
+    fireEvent.change(search, { target: { value: 'nothing-matches-this' } })
+    expect(screen.getByText(/No image matches/)).toBeTruthy()
+  })
+
+  it('offers no search box until there is something to search', async () => {
+    setMediaStorageAdapter(fakeAdapter([]))
+    render(<Harness media={media()} />)
+    await open()
+    await screen.findByText(/No images yet/)
+    expect(screen.queryByRole('searchbox')).toBeNull()
+  })
+
   it('closes on Escape', async () => {
     setMediaStorageAdapter(fakeAdapter([]))
     render(<Harness media={media()} />)

@@ -43,6 +43,7 @@ export default function MediaLibraryDialog({ media, selectedUrl, onSelect, onClo
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState<{ name: string; fraction: number } | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -91,6 +92,9 @@ export default function MediaLibraryDialog({ media, selectedUrl, onSelect, onClo
     },
     [pageId],
   )
+
+  const term = search.trim().toLowerCase()
+  const visible = (items ?? []).filter((item) => item.name.toLowerCase().includes(term))
 
   const handleDelete = async (item: MediaItem) => {
     setError(null)
@@ -147,13 +151,25 @@ export default function MediaLibraryDialog({ media, selectedUrl, onSelect, onClo
           </p>
         ) : null}
 
+        {/* Only worth showing once there is something to search through. */}
+        {items !== null && items.length > 0 ? (
+          <label className="sp-media__search">
+            <span>Search images</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </label>
+        ) : null}
+
         {items === null ? (
           <p className="sp-media__empty">Loading…</p>
         ) : items.length === 0 ? (
           <p className="sp-media__empty">No images yet. Upload PNG, JPEG, GIF, WebP or SVG files up to 10 MB.</p>
+        ) : visible.length === 0 ? (
+          // Without this the grid renders empty and a search that matches
+          // nothing looks like the library itself has gone missing.
+          <p className="sp-media__empty">No image matches “{search.trim()}”.</p>
         ) : (
           <ul className="sp-media__grid">
-            {items.map((item) => {
+            {visible.map((item) => {
               const usage = findMediaUsage(item.url, { draftConfig, publishedConfig })
               return (
                 <li key={item.path} className={item.url === selectedUrl ? 'sp-media__item sp-media__item--selected' : 'sp-media__item'}>
@@ -197,6 +213,7 @@ export default function MediaLibraryDialog({ media, selectedUrl, onSelect, onClo
             })}
           </ul>
         )}
+        {items !== null && items.length > 0 && !items.some((item) => item.name.toLowerCase().includes(search.trim().toLowerCase())) && <p className="sp-media__empty">No matching images.</p>}
       </div>
     </div>,
     document.body,

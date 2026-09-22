@@ -159,7 +159,13 @@ The image field is the sharpest case: `blocks/fields.tsx` is shared code, so
 `MediaLibraryDialog` with `React.lazy`, and `mediaService` loads the Storage
 adapter with a dynamic `import()`. Keep both boundaries.
 
-Measured 2026-09-22: entry chunk 310 KB raw / 99 KB gzip; the editor route and
+Every block registered in `blocks/index.ts` is in that entry chunk, on every
+public page, whether or not the page uses it. Eight blocks took it from 306 KB
+to 342 KB raw. That is the cost of a single shared registry, and it is worth
+paying while the block count is small; past roughly 120 KB gzip the registry
+should be split so a page loads only the blocks it contains.
+
+Measured 2026-09-22: entry chunk 342 KB raw / 107 KB gzip; the editor route and
 the Firebase SDK each load lazily on top. (The residual ~85 KB gzip of
 tiptap/prosemirror inside Puck's own `Render` is unavoidable without forking
 Puck.)

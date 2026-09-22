@@ -102,11 +102,68 @@
   }
 }
 
+/* Luxury Button & CTA Styles */
+.sp-btn-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.sp-btn-glow:hover {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.6) !important;
+}
+
+.sp-main-cta:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.sp-main-cta:active {
+  transform: translateY(0);
+}
+
+.sp-main-cta--pulse {
+  animation: sp-pulse 2.2s infinite ease-in-out;
+}
+
+.sp-main-cta--bounce {
+  animation: sp-bounce 2.5s infinite ease-in-out;
+}
+
+.sp-main-cta--shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.sp-main-cta--shimmer::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg);
+  animation: sp-shine 3s infinite;
+}
+
+.sp-online-dot {
+  animation: sp-pulse 1.8s infinite;
+}
+
 /* Accessibility: Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .sp-btn-pulse,
   .sp-btn-bounce,
-  .sp-btn-shine::after {
+  .sp-btn-shine::after,
+  .sp-main-cta--pulse,
+  .sp-main-cta--bounce,
+  .sp-main-cta--shimmer::after,
+  .sp-online-dot {
     animation: none !important;
   }
 }
