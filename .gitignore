@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+playwright-report
+test-results
 *.local
 
 # Environment files — .env.example is the only one that belongs in git.
