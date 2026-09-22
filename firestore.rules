@@ -14,8 +14,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // `.get('admin', false)` rather than `.admin`: a token without the claim
+    // has no such property, and reading it raises an evaluation error instead
+    // of returning false.
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null && request.auth.token.get('admin', false) == true;
     }
 
     function isPublished(page) {
@@ -32,10 +35,16 @@ service cloud.firestore {
       // until it has been published at least once.
       allow get: if isAdmin() || isPublished(resource.data);
 
-      // Listing is admin-only: the public site looks pages up by slug via a
-      // single-document query, and an open list would expose every page's
-      // name, slug and status.
-      allow list: if isAdmin();
+      // The public route looks a page up by slug, which Firestore evaluates as
+      // a LIST, not a get — so an admin-only list would take the whole public
+      // site down. Firestore allows a list only when the QUERY proves every
+      // document it could return satisfies this rule, so the condition can
+      // only mention fields the query constrains: `status`, and not
+      // `isPublished`, whose `publishedConfig != null` half is unprovable from
+      // a query. A page with status 'published' always has a publishedConfig
+      // (publishPage writes them together) and getPublishedPageBySlug checks
+      // it again before rendering. An unconstrained list is still refused.
+      allow list: if isAdmin() || resource.data.status == 'published';
 
       allow create: if isAdmin()
                     && request.resource.data.id == pageId

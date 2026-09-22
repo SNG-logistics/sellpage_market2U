@@ -50,6 +50,16 @@ export const firestoreAdapter: SellpageStorageAdapter = {
     return snap.empty ? null : (snap.docs[0].data() as SellpageDocument)
   },
 
+  async getPublishedBySlug(slug) {
+    // `status == 'published'` is in the query, not applied afterwards, because
+    // firestore.rules allows an anonymous list only when the query itself
+    // guarantees every document it can return is published.
+    const snap = await getDocs(
+      query(collection(getDb(), PAGES), where('slug', '==', slug), where('status', '==', 'published'), limit(1)),
+    )
+    return snap.empty ? null : (snap.docs[0].data() as SellpageDocument)
+  },
+
   async save(document) {
     // The whole document is written, so the doc id and the stored id stay in sync.
     await setDoc(pageRef(document.id), document)

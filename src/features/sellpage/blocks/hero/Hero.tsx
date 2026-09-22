@@ -1,5 +1,5 @@
 import type { ComponentConfig } from '@puckeditor/core'
-import { alignOptions, colorField } from '../fields'
+import { alignOptions, colorField, imageField } from '../fields'
 import { safeBackground, safeColor, safeImageUrl } from '../../utils/safeUrl'
 import { renderButton, type ButtonProps } from '../button/Button'
 import type { Align } from '../fields'
@@ -45,7 +45,7 @@ const heroButtonDefaults: Omit<ButtonProps, 'label' | 'url'> = {
 export const heroConfig: ComponentConfig<HeroProps> = {
   label: 'Hero',
   fields: {
-    logo: { type: 'text', label: 'Logo image URL' },
+    logo: imageField('Logo image'),
     eyebrow: { type: 'text', label: 'Eyebrow' },
     title: { type: 'text', label: 'Title' },
     subtitle: { type: 'text', label: 'Subtitle' },
@@ -60,7 +60,7 @@ export const heroConfig: ComponentConfig<HeroProps> = {
       ],
     },
     background: colorField('Background color/gradient'),
-    backgroundImage: { type: 'text', label: 'Background image URL' },
+    backgroundImage: imageField('Background image'),
     overlay: { type: 'text', label: 'Overlay color (e.g. rgba(0,0,0,0.4))' },
     alignment: { type: 'radio', label: 'Alignment', options: [...alignOptions] },
     minHeight: { type: 'number', label: 'Min height (px)', min: 200, max: 1000 },

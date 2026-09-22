@@ -1,4 +1,5 @@
 import type { CustomField } from '@puckeditor/core'
+import { ImageFieldInput } from '../media/ImageFieldInput'
 
 /** Shared field option lists, so every block offers the same choices. */
 export const alignOptions = [
@@ -49,5 +50,21 @@ export const colorField = (label: string): CustomField<string> => ({
         </button>
       </span>
     </label>
+  ),
+})
+
+/**
+ * Image URL field with the media-library picker. Use it for every prop that
+ * holds an image URL, in place of a `text` field.
+ *
+ * The stored value is still a plain URL string, so switching a `text` field
+ * to this one changes nothing about saved pages — and the render side must
+ * keep passing the value through `safeImageUrl` exactly as before.
+ */
+export const imageField = (label: string): CustomField<string> => ({
+  type: 'custom',
+  label,
+  render: ({ id, value, onChange, readOnly }) => (
+    <ImageFieldInput id={id} label={label} value={value} readOnly={readOnly} onChange={onChange} />
   ),
 })

@@ -1,6 +1,6 @@
 import type { ComponentConfig } from '@puckeditor/core'
 import type { CSSProperties } from 'react'
-import { alignOptions, type Align } from '../fields'
+import { alignOptions, imageField, type Align } from '../fields'
 import { safeCssValue, safeImageUrl, safeUrl } from '../../utils/safeUrl'
 
 export type ImageProps = {
@@ -19,7 +19,7 @@ export type ImageProps = {
 export const imageConfig: ComponentConfig<ImageProps> = {
   label: 'Image',
   fields: {
-    src: { type: 'text', label: 'Image URL', placeholder: 'https://…' },
+    src: imageField('Image'),
     alt: { type: 'text', label: 'Alt text' },
     caption: { type: 'text', label: 'Caption (optional)' },
     linkUrl: { type: 'text', label: 'Link URL (optional)' },

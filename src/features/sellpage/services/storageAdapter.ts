@@ -11,7 +11,15 @@ export type { SellpageVersion }
 export interface SellpageStorageAdapter {
   list(): Promise<SellpageDocument[]>
   get(id: string): Promise<SellpageDocument | null>
+  /** Admin-side lookup: finds a page whatever its status (slug uniqueness, editing). */
   getBySlug(slug: string): Promise<SellpageDocument | null>
+  /**
+   * The public route's lookup, separate from `getBySlug` because it is the
+   * only read a visitor performs. A backend's access rules have to be able to
+   * prove the query returns published pages only, which means the constraint
+   * belongs in the query — not in a status check after the fact.
+   */
+  getPublishedBySlug(slug: string): Promise<SellpageDocument | null>
   save(doc: SellpageDocument): Promise<void>
   remove(id: string): Promise<void>
   listVersions(pageId: string): Promise<SellpageVersion[]>
@@ -61,6 +69,9 @@ export const localStorageAdapter: SellpageStorageAdapter = {
   },
   async getBySlug(slug) {
     return Object.values(readAll()).find((doc) => doc.slug === slug) ?? null
+  },
+  async getPublishedBySlug(slug) {
+    return Object.values(readAll()).find((doc) => doc.slug === slug && doc.status === 'published') ?? null
   },
   async save(doc) {
     const all = readAll()

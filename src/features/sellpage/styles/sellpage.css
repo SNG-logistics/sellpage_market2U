@@ -84,6 +84,24 @@
   }
 }
 
+/* Responsive Block Utilities */
+
+@media (max-width: 640px) {
+  .sp-container--stack-mobile {
+    flex-direction: column !important;
+  }
+
+  .sp-stats {
+    grid-template-columns: repeat(var(--sp-stats-mobile-cols, 1), minmax(0, 1fr)) !important;
+  }
+
+  /* Both classes are attached only when the block carries an override, so
+     these rules never reach a page saved before those props existed. */
+  .sp-responsive-text {
+    font-size: var(--sp-mobile-font-size) !important;
+  }
+}
+
 /* Accessibility: Respect Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .sp-btn-pulse,

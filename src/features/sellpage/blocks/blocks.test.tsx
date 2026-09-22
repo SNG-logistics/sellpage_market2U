@@ -60,6 +60,40 @@ describe('pages saved before the B1 props existed', () => {
     expect(p.style.fontWeight).toBe('400')
   })
 
+  it('Heading and Text saved before mobileFontSize keep one size at every width', () => {
+    const heading = renderBlock('Heading', {
+      text: 'Old heading',
+      level: 'h2',
+      align: 'left',
+      color: '',
+      fontSize: 32,
+      fontWeight: 700,
+      lineHeight: 1.2,
+    })
+    expect(heading.container.querySelector('.sp-responsive-text')).toBeNull()
+    heading.unmount()
+
+    const text = renderBlock('Text', {
+      content: 'Old text',
+      align: 'left',
+      color: '',
+      fontSize: 16,
+      fontWeight: 400,
+      lineHeight: 1.6,
+      opacity: 1,
+    })
+    expect(text.container.querySelector('.sp-responsive-text')).toBeNull()
+  })
+
+  it('a mobile font size, when set, is exposed to the mobile rule', () => {
+    const { container } = renderBlock('Heading', {
+      ...(puckConfig.components.Heading.defaultProps as Record<string, unknown>),
+      mobileFontSize: 24,
+    })
+    const elem = container.querySelector('.sp-responsive-text') as HTMLElement
+    expect(elem.style.getPropertyValue('--sp-mobile-font-size')).toBe('24px')
+  })
+
   it('Image keeps its link in the same tab and stays left-aligned', () => {
     const { getByRole } = renderBlock('Image', {
       src: 'https://example.com/a.jpg',
@@ -182,3 +216,197 @@ describe('Button', () => {
     expect(getByRole('link').style.background).not.toBe('')
   })
 })
+
+describe('Hero', () => {
+  const base = { ...(puckConfig.components.Hero.defaultProps as Record<string, unknown>) }
+
+  it('renders title, eyebrow, subtitle, and description', () => {
+    const { getByText, getByRole } = renderBlock('Hero', {
+      ...base,
+      eyebrow: 'Limited Offer',
+      title: 'Super Hero Title',
+      subtitle: 'Sub headline text',
+      description: 'Long description paragraph',
+    })
+    expect(getByText('Limited Offer')).toBeTruthy()
+    expect(getByRole('heading', { level: 1, name: 'Super Hero Title' })).toBeTruthy()
+    expect(getByText('Sub headline text')).toBeTruthy()
+    expect(getByText('Long description paragraph')).toBeTruthy()
+  })
+
+  it('renders primary and secondary CTA buttons', () => {
+    const { getByRole } = renderBlock('Hero', {
+      ...base,
+      primaryCtaLabel: 'Buy Now',
+      primaryCtaUrl: 'https://example.com/buy',
+      secondaryCtaLabel: 'Details',
+      secondaryCtaUrl: 'https://example.com/info',
+    })
+    expect(getByRole('link', { name: 'Buy Now' }).getAttribute('href')).toBe('https://example.com/buy')
+    expect(getByRole('link', { name: 'Details' }).getAttribute('href')).toBe('https://example.com/info')
+  })
+
+  it('sanitizes unsafe background images and logos', () => {
+    const { container } = renderBlock('Hero', {
+      ...base,
+      bgType: 'image',
+      backgroundImage: 'javascript:alert(1)',
+      logo: 'javascript:alert(2)',
+    })
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.innerHTML).not.toContain('javascript:')
+  })
+})
+
+describe('Stats', () => {
+  const base = { ...(puckConfig.components.Stats.defaultProps as Record<string, unknown>) }
+
+  it('renders stat items with value and label', () => {
+    const { getByText } = renderBlock('Stats', {
+      ...base,
+      items: [
+        { value: '5,000+', label: 'Users' },
+        { value: '99%', label: 'Uptime' },
+      ],
+    })
+    expect(getByText('5,000+')).toBeTruthy()
+    expect(getByText('Users')).toBeTruthy()
+    expect(getByText('99%')).toBeTruthy()
+    expect(getByText('Uptime')).toBeTruthy()
+  })
+
+  it('overrides the column count on mobile when asked', () => {
+    const { container } = renderBlock('Stats', { ...base, columns: 3, mobileColumns: 2 })
+    const elem = container.querySelector('.sp-stats') as HTMLElement
+    expect(elem.style.getPropertyValue('--sp-stats-mobile-cols')).toBe('2')
+    expect(elem.style.gridTemplateColumns).toBe('repeat(3, minmax(0, 1fr))')
+  })
+
+  it('a grid saved before mobileColumns existed keeps its columns at every width', () => {
+    const { container } = renderBlock('Stats', {
+      items: [{ value: '1', label: 'One' }],
+      align: 'center',
+      valueColor: '',
+      labelColor: '',
+      valueFontSize: 36,
+      columns: 3,
+    })
+    // No class means the mobile rule cannot match it at all.
+    expect(container.querySelector('.sp-stats')).toBeNull()
+  })
+})
+
+describe('Alert', () => {
+  const base = { ...(puckConfig.components.Alert.defaultProps as Record<string, unknown>) }
+
+  it('renders alert preset variants with title and message', () => {
+    const { getByText, getByRole } = renderBlock('Alert', {
+      ...base,
+      variant: 'vip',
+      title: 'VIP Notice',
+      description: 'Exclusive access granted.',
+    })
+    expect(getByRole('status')).toBeTruthy()
+    expect(getByText('VIP Notice')).toBeTruthy()
+    expect(getByText('Exclusive access granted.')).toBeTruthy()
+  })
+
+  it('sanitizes unsafe background colors', () => {
+    const { getByRole } = renderBlock('Alert', {
+      ...base,
+      background: 'image-set("https://evil.example/t.gif" 1x)',
+    })
+    expect(getByRole('status').style.background).not.toContain('evil.example')
+  })
+})
+
+describe('SocialButton', () => {
+  const base = { ...(puckConfig.components.SocialButton.defaultProps as Record<string, unknown>), url: 'https://line.me/ti/p/@market2u' }
+
+  it('renders LINE network button by default with brand color', () => {
+    const { getByRole } = renderBlock('SocialButton', { ...base, network: 'line' })
+    const link = getByRole('link')
+    expect(link.getAttribute('href')).toBe('https://line.me/ti/p/@market2u')
+    expect(link.style.background).toBe('rgb(6, 199, 85)')
+  })
+
+  it('supports all 10 social networks', () => {
+    const networks = ['line', 'whatsapp', 'telegram', 'facebook', 'tiktok', 'instagram', 'youtube', 'website', 'phone', 'email'] as const
+    networks.forEach((network) => {
+      const { container, unmount } = renderBlock('SocialButton', { ...base, network })
+      expect(container.innerHTML).not.toBe('')
+      unmount()
+    })
+  })
+
+  it('allows admin custom color overrides', () => {
+    const { getByRole } = renderBlock('SocialButton', {
+      ...base,
+      customBackground: '#123456',
+      customTextColor: '#ffffff',
+    })
+    const link = getByRole('link')
+    expect(link.style.background).toBe('rgb(18, 52, 86)')
+  })
+})
+
+describe('Container', () => {
+  const base = { ...(puckConfig.components.Container.defaultProps as Record<string, unknown>) }
+
+  it('renders direction, gap and padding', () => {
+    const { container } = renderBlock('Container', { ...base, direction: 'row', gap: 20, padding: 30 })
+    const elem = container.querySelector('.sp-container') as HTMLElement
+    expect(elem.style.flexDirection).toBe('row')
+    expect(elem.style.gap).toBe('20px')
+    expect(elem.style.padding).toBe('30px')
+  })
+
+  it('stacks on mobile when asked, and only then', () => {
+    const on = renderBlock('Container', { ...base, stackOnMobile: true })
+    expect(on.container.querySelector('.sp-container--stack-mobile')).toBeTruthy()
+    on.unmount()
+
+    const off = renderBlock('Container', { ...base, stackOnMobile: false })
+    expect(off.container.querySelector('.sp-container--stack-mobile')).toBeNull()
+  })
+
+  it('a row container saved before stackOnMobile existed still does not stack', () => {
+    // No stackOnMobile in the props at all — defaultProps do not apply to a
+    // saved page, so the fallback decides, and it must be "as before".
+    const { container } = renderBlock('Container', {
+      content: [],
+      direction: 'row',
+      gap: 16,
+      padding: 24,
+      background: '',
+      radius: 0,
+      maxWidth: 0,
+    })
+    expect(container.querySelector('.sp-container--stack-mobile')).toBeNull()
+  })
+})
+
+describe('theme', () => {
+  const data = { root: { props: {} }, content: [] } as unknown as SellpageData
+  const themeRoot = (container: HTMLElement) => container.firstElementChild as HTMLElement
+
+  it('passes the theme through as CSS variables', () => {
+    const theme = { ...defaultTheme(), background: 'linear-gradient(180deg, #ffffff, #faf9f5)' }
+    theme.colors = { ...theme.colors, primary: '#ff0000' }
+    const root = themeRoot(render(<SellpageRenderer data={data} theme={theme} />).container)
+    expect(root.style.getPropertyValue('--sp-primary')).toBe('#ff0000')
+    expect(root.style.background).toContain('linear-gradient')
+  })
+
+  it('never lets a theme value carry a remote image into a background', () => {
+    // Blocks write `background: var(--sp-surface)`, so the variable is the way in.
+    const hostile = 'image-set("https://evil.example/t.gif" 1x)'
+    const theme = { ...defaultTheme(), background: hostile }
+    theme.colors = { ...theme.colors, surface: hostile, text: hostile }
+    const root = themeRoot(render(<SellpageRenderer data={data} theme={theme} />).container)
+
+    expect(root.getAttribute('style')).not.toContain('evil.example')
+    expect(root.style.getPropertyValue('--sp-surface')).toBe(defaultTheme().colors.surface)
+  })
+})
+

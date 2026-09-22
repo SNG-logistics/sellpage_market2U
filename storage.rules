@@ -7,8 +7,11 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // `.get('admin', false)` rather than `.admin`: a token without the claim
+    // has no such property, and reading it raises an evaluation error instead
+    // of returning false.
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null && request.auth.token.get('admin', false) == true;
     }
 
     function isImage() {

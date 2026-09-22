@@ -14,6 +14,7 @@ export type StatsProps = {
   labelColor: string
   valueFontSize: number
   columns: 2 | 3 | 4
+  mobileColumns?: 1 | 2
 }
 
 export const statsConfig: ComponentConfig<StatsProps> = {
@@ -37,11 +38,19 @@ export const statsConfig: ComponentConfig<StatsProps> = {
     valueFontSize: { type: 'number', label: 'Value Font Size', min: 18, max: 72 },
     columns: {
       type: 'select',
-      label: 'Grid Columns',
+      label: 'Grid Columns (Desktop)',
       options: [
         { label: '2 Columns', value: 2 },
         { label: '3 Columns', value: 3 },
         { label: '4 Columns', value: 4 },
+      ],
+    },
+    mobileColumns: {
+      type: 'radio',
+      label: 'Mobile Columns',
+      options: [
+        { label: '1 Column', value: 1 },
+        { label: '2 Columns', value: 2 },
       ],
     },
   },
@@ -56,21 +65,28 @@ export const statsConfig: ComponentConfig<StatsProps> = {
     labelColor: '',
     valueFontSize: 36,
     columns: 3,
+    mobileColumns: 1,
   },
-  render: ({ items, align, valueColor, labelColor, valueFontSize, columns }) => {
+  render: ({ items, align, valueColor, labelColor, valueFontSize, columns, mobileColumns }) => {
     const valColor = safeColor(valueColor) ?? 'var(--sp-primary, #0f6b5c)'
     const lblColor = safeColor(labelColor) ?? 'var(--sp-text, #14201d)'
     const textAlign = align === 'center' ? 'center' : align === 'right' ? 'right' : 'left'
+    // Only opt a block into the mobile override when it actually carries the
+    // prop. A page saved before this existed has no `mobileColumns`, and must
+    // keep showing `columns` at every width (rule 8).
+    const mCols = mobileColumns === 1 || mobileColumns === 2 ? mobileColumns : null
 
     return (
       <div
+        className={mCols === null ? undefined : 'sp-stats'}
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${columns || 3}, minmax(0, 1fr))`,
           gap: 24,
           padding: '24px 16px',
           width: '100%',
-        }}
+          ...(mCols === null ? {} : { '--sp-stats-mobile-cols': String(mCols) }),
+        } as React.CSSProperties}
       >
         {items.map((item, index) => (
           // eslint-disable-next-line react/no-array-index-key -- stats items don't have stable unique IDs

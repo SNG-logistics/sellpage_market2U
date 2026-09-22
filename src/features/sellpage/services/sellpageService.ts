@@ -76,7 +76,7 @@ export type PublishedLookup =
 export const getPublishedPageBySlug = async (slug: string): Promise<PublishedLookup> => {
   let doc: SellpageDocument | null
   try {
-    doc = await adapter.getBySlug(slug)
+    doc = await adapter.getPublishedBySlug(slug)
   } catch {
     return { ok: false, reason: 'corrupted' }
   }

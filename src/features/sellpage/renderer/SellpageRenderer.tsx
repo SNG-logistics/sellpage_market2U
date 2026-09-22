@@ -4,7 +4,8 @@
 import { Render } from '@puckeditor/core/rsc'
 import type { CSSProperties } from 'react'
 import { puckConfig } from '../blocks'
-import type { SellpageData, SellpageTheme } from '../schemas/sellpage.types'
+import { defaultTheme, type SellpageData, type SellpageTheme } from '../schemas/sellpage.types'
+import { safeBackground, safeColor } from '../utils/safeUrl'
 import '../styles/sellpage.css'
 
 type Props = {
@@ -22,19 +23,25 @@ type Props = {
 export function SellpageRenderer({ data, theme }: Props) {
   if (!theme) return <Render config={puckConfig} data={data} />
 
+  // The theme is user input like any block prop. It matters most here: blocks
+  // write `background: var(--sp-surface)`, so an unsanitized variable would
+  // carry an `image-set("https://…")` into a background on every block at once.
+  const fallback = defaultTheme()
+  const color = (key: keyof SellpageTheme['colors']) => safeColor(theme.colors[key]) ?? fallback.colors[key]
+
   const themeStyle: CSSProperties & Record<string, string | number> = {
     // Exposed as CSS variables so blocks and future theme-aware styles can
     // read them without each block importing the theme type.
-    '--sp-primary': theme.colors.primary,
-    '--sp-secondary': theme.colors.secondary,
-    '--sp-accent': theme.colors.accent,
-    '--sp-background': theme.colors.background,
-    '--sp-surface': theme.colors.surface,
-    '--sp-text': theme.colors.text,
-    '--sp-muted': theme.colors.muted,
+    '--sp-primary': color('primary'),
+    '--sp-secondary': color('secondary'),
+    '--sp-accent': color('accent'),
+    '--sp-background': color('background'),
+    '--sp-surface': color('surface'),
+    '--sp-text': color('text'),
+    '--sp-muted': color('muted'),
     '--sp-spacing': `${theme.spacing}px`,
-    background: theme.background,
-    color: theme.colors.text,
+    background: safeBackground(theme.background) ?? fallback.background,
+    color: color('text'),
     fontFamily: theme.typography.bodyFont,
     minHeight: '100%',
   }

@@ -32,6 +32,9 @@ src/features/sellpage/
                FallbackPage.tsx    <- shown instead of a blank public page
   services/    sellpageService.ts  <- every read/write of a page
                storageAdapter.ts   <- storage behind an interface
+               mediaService.ts     <- every list/upload/delete of an image
+  media/       ImageFieldInput.tsx <- the image field's UI (ships publicly, tiny)
+               MediaLibraryDialog  <- the library itself (lazy, admin only)
   hooks/       useAutosave.ts, usePageHead.ts
   builder/     SellpageBuilder.tsx <- wraps <Puck>, adds autosave + publish
   utils/       safeUrl.ts          <- URL/CSS sanitizers
@@ -85,6 +88,13 @@ therefore changes pages nobody has reopened or republished.
 - `publishPage()` is the only function that writes a `published*` field.
 - The public route calls `getPublishedPageBySlug()`, which refuses drafts and
   unpublished pages by construction.
+- It looks the page up with `getPublishedBySlug()`, **not** `getBySlug()`. The
+  two exist separately because a slug lookup is a *query*, and a backend's
+  access rules can only allow a query whose own constraints prove it cannot
+  return a page the visitor may not see. So `status == 'published'` belongs in
+  the query, not in a check afterwards. `getBySlug()` stays admin-side, for
+  slug uniqueness, where drafts must be visible. (Found by the emulator rules
+  tests: with an admin-only `list`, every public page 404s.)
 
 ## Storage
 
@@ -95,6 +105,36 @@ The default adapter is `localStorageAdapter` — fine for development, **not
 multi-user safe**. Moving to Firestore means implementing the interface in a
 new file and calling `setSellpageStorageAdapter()` at startup; no page, block
 or hook changes.
+
+## Media library
+
+Images live in Firebase Storage at `sellpages/{pageId}/{fileName}` — the one
+path `storage.rules` opens (public read, admin write, images under 10 MB).
+
+- **A block stores a plain URL string**, the same as before the library
+  existed. The library is only a way to fill that string in; pasting a URL
+  still works, and the render side still passes it through `safeImageUrl`.
+- **Every image prop uses `imageField()`** from `blocks/fields.tsx`, not a
+  `text` field.
+- UI goes through `services/mediaService.ts`, never the Storage SDK. The
+  Firebase implementation (`firebaseMediaAdapter.ts`) is loaded by dynamic
+  import; tests swap in an in-memory adapter with `setMediaStorageAdapter()`.
+- `mediaService` repeats the type and size limits from `storage.rules` so the
+  user gets a readable message without a round trip. **The rules are the
+  control; keep the two in step.**
+- File names are generated (`buildMediaFileName`): the original name is user
+  input headed for a URL path, so only `[a-z0-9-]` survives, the extension
+  comes from the MIME type, and a unique prefix means no upload can overwrite
+  another. That is also what makes the one-year immutable cache header safe.
+- **`deleteMedia` refuses a file the draft or published page still shows.**
+  Storage has no undo, and a deleted file on a published page is a broken image
+  in front of customers. The builder hands the dialog its live draft through
+  `MediaContext`, because the saved draft lags by the autosave debounce.
+- Without Firebase the library is unavailable and the field says so; it does
+  not fall back to `data:` URLs, which `safeImageUrl` rejects by design.
+
+Not covered yet: files are not removed when a page is deleted, and a version
+restored from history can reference an image deleted since.
 
 ## Bundle boundary
 
@@ -114,7 +154,12 @@ The same goes for **`lib/firebase.ts`**, which pulls in the ~557 KB Firebase
 SDK. Shared code that only needs to know whether Firebase is configured imports
 `lib/firebaseConfig.ts` (no SDK) instead.
 
-Measured 2026-09-22: entry chunk 306 KB raw / 98 KB gzip; the editor route and
+The image field is the sharpest case: `blocks/fields.tsx` is shared code, so
+`media/ImageFieldInput.tsx` ships publicly. It therefore loads
+`MediaLibraryDialog` with `React.lazy`, and `mediaService` loads the Storage
+adapter with a dynamic `import()`. Keep both boundaries.
+
+Measured 2026-09-22: entry chunk 310 KB raw / 99 KB gzip; the editor route and
 the Firebase SDK each load lazily on top. (The residual ~85 KB gzip of
 tiptap/prosemirror inside Puck's own `Render` is unavoidable without forking
 Puck.)
@@ -134,9 +179,30 @@ Puck.)
   CSS decodes the escape. `safeBackground` is an allow-list — a colour, or
   exactly one gradient, no quotes or backslashes. Image backgrounds go through
   their own `safeImageUrl()` field (see Hero), not through a free-text value.
+- **The theme is user input too.** `SellpageRenderer` passes every theme colour
+  through `safeColor()` and the page background through `safeBackground()`
+  before writing the `--sp-*` variables — blocks use `background:
+  var(--sp-surface)`, so an unsanitized variable would reach every block.
 - Block content is rendered as React children — never `dangerouslySetInnerHTML`.
   The page contract has no raw-HTML field, deliberately (see SCHEMA.md).
 - `usePageHead` writes head tags with `setAttribute`, never `innerHTML`.
+
+## Rules, and how they are tested
+
+`firestore.rules` and `storage.rules` are the real boundary — the admin UI is a
+browser app and cannot be trusted. `npm run test:emulator` runs both against the
+Firebase emulators; run it after touching either file.
+
+Two things the emulator taught us, both easy to get wrong by reading alone:
+
+- **A rule for `list` may only mention fields the query constrains.** Firestore
+  evaluates a query against the rule *before* reading anything, so it must be
+  able to prove safety from the query itself. `status == 'published'` works;
+  `publishedConfig != null` does not, however true it is of every stored page.
+- **`request.auth.token.admin` throws** for a token without the claim
+  ("Property admin is undefined"), rather than evaluating false. Use
+  `request.auth.token.get('admin', false)`. Either way access is denied, so the
+  bug hides — it shows up only as noise in the emulator log.
 
 ## Still open
 

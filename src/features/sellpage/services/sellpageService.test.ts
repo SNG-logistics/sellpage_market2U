@@ -29,6 +29,11 @@ const makeMemoryAdapter = (): SellpageStorageAdapter => {
     async getBySlug(slug) {
       return [...docs.values()].find((d) => d.slug === slug) ?? null
     },
+    async getPublishedBySlug(slug) {
+      // Mirrors the real adapters: the status filter is part of the lookup,
+      // so a service that used getBySlug here would be caught by these tests.
+      return [...docs.values()].find((d) => d.slug === slug && d.status === 'published') ?? null
+    },
     async save(doc) {
       docs.set(doc.id, doc)
     },
