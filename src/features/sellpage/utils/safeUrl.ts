@@ -42,6 +42,21 @@ export const safeImageUrl = (input: unknown): string | null => {
   return url.startsWith('/') || url.startsWith('http://') || url.startsWith('https://') ? url : null
 }
 
+/**
+ * A CSS `url()` for an already-sanitized image URL, quoted and escaped.
+ *
+ * `safeImageUrl` returns relative paths as typed, and the URL serializer
+ * leaves `(`, `)` and quotes alone — so an unquoted `url(${u})` can be closed
+ * early by the value itself. Inside a quoted CSS string only `"`, `\` and
+ * line breaks are special; the first two are escaped here and `safeUrl`
+ * already strips whitespace and control characters.
+ *
+ * Takes the output of `safeImageUrl` only. It escapes; it does not decide
+ * what is allowed to load.
+ */
+export const cssUrl = (safeImageUrlOutput: string): string =>
+  `url("${safeImageUrlOutput.replace(/[\\"]/g, (ch) => '\\' + ch)}")`
+
 const CSS_COLOR = /^(#[0-9a-fA-F]{3,8}|rgba?\([\d\s.,%/]+\)|hsla?\([\d\s.,%/deg]+\)|transparent|currentColor)$/
 
 /** Accepts plain colour values only, so user input cannot smuggle url() or expressions into style. */

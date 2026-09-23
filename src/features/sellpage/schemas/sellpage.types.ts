@@ -38,6 +38,19 @@ export type SellpageTheme = {
   }
   /** Page background, behind every block. */
   background: string
+  /**
+   * Optional photo behind the whole page, over `background`. Absent or '' =
+   * none, which is every page saved before this existed — they render exactly
+   * as before. A plain URL, rendered through `safeImageUrl`.
+   */
+  backgroundImage?: string
+  /** How the photo fills the screen. Absent = 'cover'. */
+  backgroundImageFit?: 'cover' | 'contain' | 'repeat'
+  /**
+   * 0–90: how strongly the photo is veiled in `colors.background`, so text
+   * chosen for that colour stays readable over it. Absent = 0.
+   */
+  backgroundOverlay?: number
   /** Max content width in px; 0 = full bleed. */
   maxWidth: number
   /** Base spacing unit in px, for blocks that opt into theme spacing. */

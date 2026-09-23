@@ -1,3 +1,4 @@
+import { ImageFieldInput } from '../media/ImageFieldInput'
 import type { SellpageTheme } from '../schemas/sellpage.types'
 import { defaultTheme } from '../schemas/sellpage.types'
 import { themePresets, type ThemePresetKey } from '../theme/themePresets'
@@ -20,6 +21,12 @@ const COLOR_FIELDS: { key: keyof SellpageTheme['colors']; label: string }[] = [
 
 // Thai and Lao first — this builder's pages are written in those scripts, and
 // most Latin-first stacks render them with mismatched metrics.
+const IMAGE_FITS: { value: NonNullable<SellpageTheme['backgroundImageFit']>; label: string }[] = [
+  { value: 'cover', label: 'Fill the screen' },
+  { value: 'contain', label: 'Show whole image' },
+  { value: 'repeat', label: 'Tile (repeat)' },
+]
+
 const FONT_STACKS = [
   { label: 'Noto Sans Thai / Lao', value: "'Noto Sans Thai', 'Noto Sans Lao', system-ui, sans-serif" },
   { label: 'Noto Serif Thai / Lao', value: "'Noto Serif Thai', 'Noto Serif Lao', Georgia, serif" },
@@ -38,12 +45,21 @@ export function ThemePanel({ theme, onChange, onClose }: Props) {
   const setTypography = (patch: Partial<SellpageTheme['typography']>) =>
     onChange({ ...theme, typography: { ...theme.typography, ...patch } })
 
+  // A preset is a look; the background photo is the seller's content. Keep
+  // it across a preset change — the veil follows the new background colour.
   const applyPreset = (key: ThemePresetKey) => {
     const preset = themePresets[key]
     if (preset) {
-      onChange(preset.theme)
+      onChange({
+        ...preset.theme,
+        backgroundImage: theme.backgroundImage,
+        backgroundImageFit: theme.backgroundImageFit,
+        backgroundOverlay: theme.backgroundOverlay,
+      })
     }
   }
+
+  const overlay = theme.backgroundOverlay ?? 0
 
   return (
     <aside className="sp-theme" aria-label="Theme settings">
@@ -144,6 +160,42 @@ export function ThemePanel({ theme, onChange, onClose }: Props) {
           <span>Page background</span>
           <input type="text" value={theme.background} onChange={(e) => onChange({ ...theme, background: e.target.value })} />
         </label>
+        <div className="sp-theme__row">
+          <ImageFieldInput
+            id="sp-theme-background-image"
+            label="Background image"
+            value={theme.backgroundImage}
+            onChange={(url) => onChange({ ...theme, backgroundImage: url })}
+          />
+        </div>
+        {theme.backgroundImage ? (
+          <>
+            <label className="sp-theme__row">
+              <span>Image fit</span>
+              <select
+                value={theme.backgroundImageFit ?? 'cover'}
+                onChange={(e) => onChange({ ...theme, backgroundImageFit: e.target.value as SellpageTheme['backgroundImageFit'] })}
+              >
+                {IMAGE_FITS.map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="sp-theme__row">
+              <span>Image overlay ({overlay}%)</span>
+              <input
+                type="range"
+                min={0}
+                max={90}
+                step={5}
+                value={overlay}
+                onChange={(e) => onChange({ ...theme, backgroundOverlay: Number(e.target.value) })}
+              />
+            </label>
+          </>
+        ) : null}
         <label className="sp-theme__row">
           <span>Max width (0 = full)</span>
           <input

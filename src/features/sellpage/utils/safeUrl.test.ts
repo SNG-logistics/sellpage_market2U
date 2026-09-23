@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { safeBackground, safeColor, safeCssValue, safeImageUrl, safeUrl } from './safeUrl'
+import { cssUrl, safeBackground, safeColor, safeCssValue, safeImageUrl, safeUrl } from './safeUrl'
 
 describe('safeUrl', () => {
   it('allows http/https/mailto/tel/line URLs', () => {
@@ -126,5 +126,25 @@ describe('safeBackground', () => {
   it('shows why safeCssValue must not guard a background', () => {
     expect(safeCssValue('image-set("https://evil.example/t.gif" 1x)')).toBeDefined()
     expect(safeCssValue('\\75rl(https://evil.example/t.gif)')).toBeDefined()
+  })
+})
+
+describe('cssUrl', () => {
+  it('quotes the URL so its own characters cannot close the url()', () => {
+    // safeImageUrl hands relative paths back as typed, parentheses included.
+    // Unquoted, `)` would end the url() early and the rest would become CSS.
+    const path = safeImageUrl('/x),url(https://evil.example/p.gif')
+    expect(path).not.toBeNull()
+    expect(cssUrl(path!)).toBe('url("/x),url(https://evil.example/p.gif")')
+  })
+
+  it('escapes the two characters that are special inside a quoted CSS string', () => {
+    expect(cssUrl('/a"b')).toBe('url("/a\\"b")')
+    expect(cssUrl('/a\\b')).toBe('url("/a\\\\b")')
+  })
+
+  it('leaves an ordinary URL unchanged inside the quotes', () => {
+    expect(cssUrl('https://cdn.example.com/bg.jpg')).toBe('url("https://cdn.example.com/bg.jpg")')
+    expect(cssUrl('/images/bg.webp')).toBe('url("/images/bg.webp")')
   })
 })

@@ -53,9 +53,19 @@ Shape: `{ root, content: Block[], zones }`.
 `typography` (headingFont, bodyFont, scale), `background`, `maxWidth`
 (0 = full bleed), `spacing`.
 
-The renderer exposes these as CSS variables (`--sp-primary`, `--sp-text`,
-`--sp-spacing`, …) on the wrapper, so blocks can consume the theme without
-importing the theme type.
+Optional, added without a schema bump — absent on every theme saved before
+them, and absent renders exactly as before:
+
+| Field | Absent means | Notes |
+| --- | --- | --- |
+| `backgroundImage` | no photo | Plain URL, through `safeImageUrl` then `cssUrl`. |
+| `backgroundImageFit` | `'cover'` | `'cover' \| 'contain' \| 'repeat'`, against the viewport. |
+| `backgroundOverlay` | `0` | 0–90, a veil in `colors.background`. Clamped at render. |
+
+`renderer/ThemeFrame.tsx` applies all of it, for the public page and the
+editor canvas alike, and exposes the colours as CSS variables (`--sp-primary`,
+`--sp-text`, `--sp-spacing`, …) on the wrapper, so blocks can consume the theme
+without importing the theme type.
 
 Fonts default to `'Noto Sans Thai', 'Noto Sans Lao', system-ui, sans-serif`.
 

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { Puck } from '@puckeditor/core'
 import '@puckeditor/core/puck.css'
 import { puckConfig } from '../blocks'
@@ -7,6 +7,7 @@ import { ThemePanel } from './ThemePanel'
 import { SeoPanel } from './SeoPanel'
 import { PagePanel } from './PagePanel'
 import { MediaContext, type MediaContextValue } from '../media/mediaContext'
+import { ThemeFrame } from '../renderer/ThemeFrame'
 import { useAutosave, type AutosaveStatus } from '../hooks/useAutosave'
 import type { SellpageData, SellpageDocument, SellpageSeo, SellpageSettings, SellpageTheme } from '../schemas/sellpage.types'
 import {
@@ -28,6 +29,25 @@ type Props = {
 type ActivePanel = 'none' | 'theme' | 'seo' | 'page'
 
 const panelLabels = { theme: 'Theme', seo: 'SEO', page: 'Page' } as const
+
+/**
+ * The draft theme, carried into Puck's canvas iframe.
+ *
+ * The canvas used to render blocks with no theme around them, so colour,
+ * font, width and background edits only appeared after Publish. It now wraps
+ * its blocks in the same `ThemeFrame` as the public page. Context rather than
+ * a prop because Puck owns the iframe; its content is a React portal, so
+ * context reaches it. The override is a stable module-level component — a new
+ * function every render would remount the whole canvas on every keystroke.
+ */
+const CanvasThemeContext = createContext<SellpageTheme | null>(null)
+
+function CanvasTheme({ children }: { children: ReactNode }) {
+  const theme = useContext(CanvasThemeContext)
+  return theme ? <ThemeFrame theme={theme}>{children}</ThemeFrame> : <>{children}</>
+}
+
+const canvasOverrides = { iframe: CanvasTheme }
 
 const statusCopy: Record<AutosaveStatus, string> = {
   idle: 'Saved',
@@ -152,37 +172,40 @@ export function SellpageBuilder({ page: initialPage, userId, onBack, onPublished
     <div className="sp-builder">
       <MediaContext.Provider value={mediaContext}>
         <div className="sp-builder__canvas">
-          <Puck
-            config={puckConfig}
-            data={draft}
-            viewports={sellpageViewports}
-            onChange={setDraft}
-            headerTitle={currentPage.name}
-            headerPath={`/${currentPage.slug}`}
-            renderHeaderActions={() => (
-              <div className="sp-builder__header-actions">
-                <span className={`sp-autosave sp-autosave--${saveStatus}`}>{statusCopy[saveStatus]}</span>
-                {publishError ? <span className="sp-publish-error">{publishError}</span> : null}
-                <button type="button" className="sp-btn-back" onClick={onBack}>
-                  Back
-                </button>
-                {(['theme', 'seo', 'page'] as const).map((panel) => (
-                  <button
-                    key={panel}
-                    type="button"
-                    className="sp-btn-theme"
-                    onClick={() => togglePanel(panel)}
-                    aria-pressed={activePanel === panel}
-                  >
-                    {panelLabels[panel]}
+          <CanvasThemeContext.Provider value={theme}>
+            <Puck
+              config={puckConfig}
+              data={draft}
+              overrides={canvasOverrides}
+              viewports={sellpageViewports}
+              onChange={setDraft}
+              headerTitle={currentPage.name}
+              headerPath={`/${currentPage.slug}`}
+              renderHeaderActions={() => (
+                <div className="sp-builder__header-actions">
+                  <span className={`sp-autosave sp-autosave--${saveStatus}`}>{statusCopy[saveStatus]}</span>
+                  {publishError ? <span className="sp-publish-error">{publishError}</span> : null}
+                  <button type="button" className="sp-btn-back" onClick={onBack}>
+                    Back
                   </button>
-                ))}
-                <button type="button" className="sp-btn-publish" onClick={handlePublish} disabled={publishing}>
-                  {publishing ? 'Publishing…' : 'Publish'}
-                </button>
-              </div>
-            )}
-          />
+                  {(['theme', 'seo', 'page'] as const).map((panel) => (
+                    <button
+                      key={panel}
+                      type="button"
+                      className="sp-btn-theme"
+                      onClick={() => togglePanel(panel)}
+                      aria-pressed={activePanel === panel}
+                    >
+                      {panelLabels[panel]}
+                    </button>
+                  ))}
+                  <button type="button" className="sp-btn-publish" onClick={handlePublish} disabled={publishing}>
+                    {publishing ? 'Publishing…' : 'Publish'}
+                  </button>
+                </div>
+              )}
+            />
+          </CanvasThemeContext.Provider>
         </div>
 
         {activePanel === 'theme' && (

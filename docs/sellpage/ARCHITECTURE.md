@@ -55,6 +55,12 @@ src/pages/
                           blocks/index.ts (one Puck Config)
 ```
 
+The theme around the blocks is shared the same way: `renderer/ThemeFrame.tsx`
+wraps the public page (through `SellpageRenderer`) **and** the editor canvas
+(through Puck's `iframe` override). Until it did, the canvas showed no theme at
+all, and every colour, font, width or background edit appeared only after
+Publish.
+
 There is exactly **one** renderer and **one** block registry. Do not introduce
 `AdminRenderer` / `PublicRenderer`, or a second set of block implementations —
 what the admin previews is what the public gets after Publish, and that only
@@ -211,6 +217,10 @@ Puck.)
   CSS decodes the escape. `safeBackground` is an allow-list — a colour, or
   exactly one gradient, no quotes or backslashes. Image backgrounds go through
   their own `safeImageUrl()` field (see Hero), not through a free-text value.
+- **An image URL written into CSS goes through `cssUrl()`**, after
+  `safeImageUrl()`. `safeImageUrl` hands relative paths back as typed and the
+  URL serializer leaves `(`, `)` and quotes alone, so an unquoted `url(${u})`
+  can be closed early by the value. `cssUrl` quotes it and escapes `"` and `\`.
 - **The theme is user input too.** `SellpageRenderer` passes every theme colour
   through `safeColor()` and the page background through `safeBackground()`
   before writing the `--sp-*` variables — blocks use `background:

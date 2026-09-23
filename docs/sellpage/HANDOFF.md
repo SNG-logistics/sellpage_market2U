@@ -79,6 +79,8 @@ Full reasoning is in `ARCHITECTURE.md`; this is the checklist.
 | Block render tests | `blocks/blocks.test.tsx` — every block through the real `SellpageRenderer`, pre-B1 prop sets, Image and Button behaviour. |
 | Phase 8 Media library | `services/mediaService.ts` + lazy `firebaseMediaAdapter.ts`; `imageField()` in `blocks/fields.tsx`; `media/` (field input, lazy dialog, context). Upload with progress, pick, delete with in-use guard. Wired into Image `src`, Hero `logo` and `backgroundImage`. **Tested against an in-memory adapter only — never run against real Storage** (see "NOT done"). |
 | Theme sanitizing | `SellpageRenderer` passes theme colours through `safeColor` and the page background through `safeBackground` before writing `--sp-*`. |
+| A12 Page background image | Theme `backgroundImage` / `backgroundImageFit` / `backgroundOverlay`, optional (absent = unchanged render). `renderer/ThemeFrame.tsx` now wraps the public page **and** the editor canvas, which previously showed no theme. `cssUrl()` in `safeUrl.ts`. Touched B's `builder/ThemePanel.tsx` (controls; presets keep the photo) and `builder/SellpageBuilder.tsx` (canvas override). |
+| Firestore `undefined` | `ignoreUndefinedProperties` via `FIRESTORE_SETTINGS`. Puck leaves `root.readOnly` etc. undefined; Firestore rejected every save on the live site. Emulator tests now use the same settings. |
 | A11 Public projection | `schemas/publicProjection.ts` + `publicPages/{slug}`. A visitor reads only the projection; `sellpages` is admin-only. `adapter.save()` reconciles both records atomically. Closes the draft-leak gap. |
 
 ### Firebase project: `sellpage-81ae5`
