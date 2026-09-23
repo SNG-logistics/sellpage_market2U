@@ -191,7 +191,10 @@ export const defaultTheme = (): SellpageTheme => ({
     scale: 1,
   },
   background: '#faf9f5',
-  maxWidth: 960,
+  // A phone-width column, centred on a wider screen: sellpages are read on
+  // phones. Every preset uses the same. Pages published before themes
+  // existed do not get this — see `legacyPublishedTheme` in sellpageService.
+  maxWidth: 480,
   spacing: 16,
 })
 

@@ -64,6 +64,16 @@ export const getPage = (id: string) => adapter.get(id)
 
 export const getPageBySlug = (slug: string) => adapter.getBySlug(slug)
 
+/**
+ * The theme a page published before themes existed has always rendered with.
+ *
+ * `defaultTheme()` is what a NEW page starts from, and it changes as the
+ * product does — it became a 480px phone column. A live page with no stored
+ * theme must not change with it (rule 8), so its fallback is pinned here to
+ * the 960px it was published under.
+ */
+const legacyPublishedTheme = (): SellpageTheme => ({ ...defaultTheme(), maxWidth: 960 })
+
 export type PublishedLookup =
   | { ok: true; page: PublishedSellpage }
   | { ok: false; reason: 'missing' | 'corrupted' | 'incompatible' }
@@ -97,7 +107,7 @@ export const getPublishedPageBySlug = async (slug: string): Promise<PublishedLoo
       data: parsed.data,
       // Defaults if the page was published before these fields existed;
       // never the draft values, which are not in this document at all.
-      theme: doc.theme ?? defaultTheme(),
+      theme: doc.theme ?? legacyPublishedTheme(),
       seo: doc.seo ?? defaultSeo(),
       settings: doc.settings ?? defaultSettings(),
       publishedAt: doc.publishedAt,

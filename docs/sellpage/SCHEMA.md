@@ -53,6 +53,12 @@ Shape: `{ root, content: Block[], zones }`.
 `typography` (headingFont, bodyFont, scale), `background`, `maxWidth`
 (0 = full bleed), `spacing`.
 
+`maxWidth` defaults to **480** for a new page — a phone-width column, centred
+on a wider screen, because sellpages are read on phones. A page published
+before themes existed has no stored theme and keeps rendering at **960**:
+`legacyPublishedTheme()` in `sellpageService.ts`, not `defaultTheme()`, is its
+fallback, so moving the default can never narrow a live page.
+
 Optional, added without a schema bump — absent on every theme saved before
 them, and absent renders exactly as before:
 

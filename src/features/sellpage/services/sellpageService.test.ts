@@ -153,6 +153,23 @@ describe('sellpageService', () => {
       expect(result).toEqual({ ok: false, reason: 'missing' })
     })
 
+    it('a page published before themes existed keeps the 960px it was published under', async () => {
+      // Rule 8. New pages became a 480px phone column; a live page with no
+      // stored theme must not narrow with them.
+      const adapter = makeMemoryAdapter()
+      setSellpageStorageAdapter(adapter)
+      const page = await createPage('Legacy', null)
+      await adapter.save({ ...page, status: 'published', publishedConfig: dataWith('Heading', 'h1', 'Old'), publishedTheme: null, publishedAt: 1 })
+
+      const result = await getPublishedPageBySlug(page.slug)
+      expect(result.ok && result.page.theme.maxWidth).toBe(960)
+    })
+
+    it('a new page starts as a phone-width column', async () => {
+      const page = await createPage('New', null)
+      expect(page.draftTheme.maxWidth).toBe(480)
+    })
+
     it('renaming the slug of a live page stops serving the old one', async () => {
       const page = await createPage('Moving', null)
       await saveDraft(page.id, dataWith('Heading', 'h1', 'Here'), null)

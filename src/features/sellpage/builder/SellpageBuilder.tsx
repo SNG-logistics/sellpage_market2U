@@ -49,6 +49,24 @@ function CanvasTheme({ children }: { children: ReactNode }) {
 
 const canvasOverrides = { iframe: CanvasTheme }
 
+/**
+ * Open the canvas at phone width. Sellpages are read on phones — shared into
+ * LINE and Facebook chats — so that is the view to build in.
+ *
+ * Without this Puck picks the viewport closest to the *editor's* window, which
+ * on the computer a seller builds from is always Desktop 1440. Passing a
+ * current viewport is what makes Puck skip that guess; the switcher still
+ * offers every size. Module-level, so it seeds the state once rather than
+ * resetting the viewport on every render.
+ */
+const mobileFirstUi = {
+  viewports: {
+    current: { width: sellpageViewports[0].width, height: 'auto' as const },
+    controlsVisible: true,
+    options: [],
+  },
+}
+
 const statusCopy: Record<AutosaveStatus, string> = {
   idle: 'Saved',
   unsaved: 'Unsaved changes',
@@ -177,6 +195,7 @@ export function SellpageBuilder({ page: initialPage, userId, onBack, onPublished
               config={puckConfig}
               data={draft}
               overrides={canvasOverrides}
+              ui={mobileFirstUi}
               viewports={sellpageViewports}
               onChange={setDraft}
               headerTitle={currentPage.name}
