@@ -7,14 +7,16 @@ the Agent A sections and the shared rules. The rules now also live in
 `ARCHITECTURE.md` so they survive, but the status tables only live here.
 How to edit this file safely is spelled out in `/AGENTS.md` — read it first.
 
-**Last updated:** 2026-09-22 · **By:** Agent A (core) — reviewed B's B8–B13 and C's C1–C5
+**Last updated:** 2026-09-23 · **By:** Agent A (core) — reviewed B's MVP block pass
 
 ## Repository state
 
 - Branch `main`, **not yet pushed** to `origin` (local is ahead of `origin/main`).
 - `tsc -b` clean · oxlint 0 warnings · `vite build` passes.
-- `npm test` **121/121** · `npm run test:emulator` **12 passed, 1 expected fail**
-  (the documented draft-leak gap) · `npm run test:e2e` **1/1**.
+- `npm test` **147/147** (six consecutive runs) · `npm run test:emulator`
+  **12 passed, 1 expected fail** (the documented draft-leak gap) ·
+  `npm run test:e2e` **4/4**.
+- Entry chunk **342 KB raw / 107 KB gzip**.
 - Verified in a real browser: builder, all three panels, the image field, and a
   published page at `/s/:slug`, with no console or page errors.
 - Several agents share this one working tree, sometimes at the same moment.
@@ -45,7 +47,11 @@ Full reasoning is in `ARCHITECTURE.md`; this is the checklist.
    - `lib/firebase.ts` — pulls the ~557 KB SDK. To check whether Firebase is
      configured, import `lib/firebaseConfig.ts` instead (no SDK).
 
-   Current entry: **306 KB raw / 98 KB gzip**. Keep it there.
+   Current entry: **342 KB raw / 107 KB gzip**, up from 306/98 when the eight
+   luxury blocks landed. Every block in `blocks/index.ts` ships to every public
+   sellpage — that is the price of one shared registry, and it is now the
+   largest single thing on the public page. Adding a block is no longer free;
+   past roughly 120 KB gzip, splitting the registry is the next move.
 8. **A block change ships to every published page at once.** Published configs
    are re-rendered by whatever block code is deployed. A new prop must render
    exactly as before when it is `undefined` (saved pages never have it — Puck's
@@ -187,10 +193,56 @@ raised were genuine, and both were mine to fix:
 | B11 Mobile props | Simplified mobile props: `stackOnMobile` (Container), `mobileColumns` (Stats), `mobileFontSize` (Heading, Text) with render-time fallbacks. |
 | B12 Viewports | Verified 390 / 768 / 1440 in `viewports.ts`. |
 | B13 Render tests | Complete unit tests for Hero, Stats, Alert, SocialButton, Container, Image, Button in `blocks.test.tsx` (43 tests in blocks.test.tsx, 117 total). |
+| MVP TrustBar | `blocks/trust-bar/TrustBar.tsx` — 2–4 trust badges, icons, text, dividerColor, font size/weight, full-width responsive. |
+| MVP OnlineCounter | `blocks/online-counter/OnlineCounter.tsx` — Manual fixed number or dynamic simulation range with interval refresh (derived during render, no cascading renders), pulse dot/fire/users icons, border/colors. |
+| MVP BrandHero | `blocks/brand-hero/BrandHero.tsx` — Logo with media picker `imageField()`, logo width, title, subtitle, description, alignment, background/overlay. |
+| MVP PromoCard | `blocks/promo-card/PromoCard.tsx` — VIP Promo card matching luxury reference (`[Title] [Logo]`, subtitle, description, showArrow, blackGold/luxury/darkGlass/gradientGold presets). |
+| MVP SocialLinksSection | `blocks/social-links/SocialLinksSection.tsx` — Multi-item social button list with platform presets (WhatsApp, Facebook, Telegram, LINE, TikTok, Instagram, YouTube, Website), arrow decorations, lift/glow hover effects, and admin overrides. |
+| MVP StatsSection | `blocks/stats-section/StatsSection.tsx` — 3-column stats section with value, label, optional icons, dividers, card border, safe backgrounds, and mobile responsiveness. |
+| MVP SecurityNotice | `blocks/security-notice/SecurityNotice.tsx` — Security warning card with securityGold/warning/info/dark presets, icon, heading, description, warning highlight. |
+| MVP MainCTA | `blocks/main-cta/MainCTA.tsx` — Prominent full-width VIP CTA button with gold/blackGold/gradientGold/vip/glow presets, subtitles, icons, and pulse/shimmer/bounce animations. |
+| MVP Theme Presets | `theme/themePresets.ts` (`blackGold`, `darkLuxury`, `redGold`, `midnightGold`) with preset picker buttons integrated into `ThemePanel.tsx`. |
+| MVP Template | `templates/luxuryContactTemplate.ts` (`Market2U Luxury Contact`) — Full 8-section layout with luxury defaults and generic placeholders, integrated into `AdminSellpageListPage.tsx` for 1-click page creation. |
+| MVP Viewports | `viewports.ts` configured for 390px mobile-first target + 360px compact and 430px large mobile screens. Centered desktop layout with `maxWidth: 480px`. |
+| MVP Unit Tests | 64 tests in `blocks.test.tsx` (138 total across suite) covering all new blocks, props, disabled states, and template rendering. |
 
 ### Pending for Agent B
 
-None — all assigned Agent B tasks (B1–B13) completed.
+None outstanding, but see A's review below — the counter block was changed
+substantially, and the placeholder copy in StatsSection and TrustBar is worth
+another look.
+
+### A's review of the MVP block pass (2026-09-23)
+
+Sanitizers were right everywhere this time: all eight blocks route `background`
+through `safeBackground` without being asked. Fixed:
+
+- **OnlineCounter invented its audience.** It defaulted to a random 1,800–3,200,
+  drifted every 30s to look live, and was captioned "ออนไลน์ตอนนี้" — and the
+  template shipped that to every page, pre-filled with 2,547. Nothing was
+  measured. The random mode, its timer and its props are gone; the block renders
+  what the seller typed, defaults to 0, and no longer defaults to the pulsing
+  dot that signals "live". Label is now "Counter Badge"; the registry key stays
+  `OnlineCounter` so saved pages keep resolving.
+- **The whole page could be dragged sideways on a phone.** `.sp-main-cta--pulse`
+  animated `transform: scale(1.02)`, and a transform enlarges the scrollable
+  area, so a full-width CTA sat ~4px past each edge at 390px. The pulse is a
+  box-shadow ring now, which reads the same and costs the layout nothing. This
+  affected every published page using a pulsing button, not just the new CTA.
+- **Publish from the list row had no confirmation** while Unpublish beside it
+  did. It sits one misclick from Duplicate and Delete and puts the draft in
+  front of the public; it asks now, and says "Republish" once live.
+- **`duplicatePage` copied block ids**, so a duplicate shared identities with
+  its original. Rendering does not care; the per-block tracking the settings
+  already reserve fields for would have merged them. Fresh ids at every depth.
+- The counter's pulse dot animated inline, which no stylesheet can override, so
+  it ignored `prefers-reduced-motion`.
+
+Left alone, worth a decision: **StatsSection ships "10,000+ สมาชิก" and
+"100% ปลอดภัย" as defaults**, and TrustBar ships "เว็บมั่นคง". These are
+placeholders a seller edits in front of them, unlike the counter which
+fabricated at runtime — but a specific figure and an absolute safety guarantee
+are the two most likely to ship unedited. Consider neutral placeholders.
 
 ## Agent C — status (QA / rules / integration)
 
@@ -212,6 +264,19 @@ None — all assigned Agent B tasks (B1–B13) completed.
 C also noted Puck logs that `renderHeaderActions` is deprecated. It still
 works; moving to `overrides.headerActions` is B's when it becomes worth doing.
 
+### Test timeouts (2026-09-23)
+
+Both suites were failing about one run in four, on a different test each time,
+always with a 5s timeout — including on tests that only render once. Nothing was
+slow on purpose: ten vitest files each start jsdom in parallel, and opening the
+editor lazy-loads the ~467 KB Puck chunk through the dev server. The 5s
+defaults were tight enough that machine load decided the result.
+
+`testTimeout: 20s` in `vite.config.ts`, and 90s per test / 20s per expect in
+`playwright.config.ts`. These are ceilings for a hang, not expected durations —
+a passing run is no slower for them. If a test starts *needing* them, that is a
+real regression, not a slow machine.
+
 ## Next exact task
 
 Follow `DEPLOY.md` against the real project: deploy rules, enable the Google
@@ -221,6 +286,10 @@ run against live Firebase**; the emulator suite is the closest we have.
 
 Then, before any real customer data: split the public projection so a visitor
 cannot read drafts (gap 1 below).
+
+Worth doing early: the entry chunk is at 107 KB gzip because every registered
+block ships to every public page. Eight more blocks and it is time to split the
+registry.
 
 ## Known gaps / debt
 

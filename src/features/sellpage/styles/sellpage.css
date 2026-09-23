@@ -48,17 +48,22 @@
   animation: sp-shine 3s infinite;
 }
 
+/**
+ * The pulse is an expanding ring, not a growing box.
+ *
+ * It used to also `scale(1.02)`. A transform enlarges the scrollable area, so
+ * on a full-width CTA that was ~4px past each edge of a 390px phone — the
+ * whole page could be dragged sideways, on every published page using it. A
+ * box-shadow spread reads the same and costs the layout nothing.
+ */
 @keyframes sp-pulse {
   0% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(15, 107, 92, 0.4);
   }
   70% {
-    transform: scale(1.02);
     box-shadow: 0 0 0 10px rgba(15, 107, 92, 0);
   }
   100% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(15, 107, 92, 0);
   }
 }

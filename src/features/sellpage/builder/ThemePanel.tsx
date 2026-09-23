@@ -1,5 +1,6 @@
 import type { SellpageTheme } from '../schemas/sellpage.types'
 import { defaultTheme } from '../schemas/sellpage.types'
+import { themePresets, type ThemePresetKey } from '../theme/themePresets'
 
 type Props = {
   theme: SellpageTheme
@@ -37,6 +38,13 @@ export function ThemePanel({ theme, onChange, onClose }: Props) {
   const setTypography = (patch: Partial<SellpageTheme['typography']>) =>
     onChange({ ...theme, typography: { ...theme.typography, ...patch } })
 
+  const applyPreset = (key: ThemePresetKey) => {
+    const preset = themePresets[key]
+    if (preset) {
+      onChange(preset.theme)
+    }
+  }
+
   return (
     <aside className="sp-theme" aria-label="Theme settings">
       <header className="sp-theme__head">
@@ -47,6 +55,35 @@ export function ThemePanel({ theme, onChange, onClose }: Props) {
       </header>
 
       <p className="sp-theme__hint">Applies to the whole page. Takes effect publicly when you publish.</p>
+
+      <section>
+        <h3>Theme Presets</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
+          {(Object.keys(themePresets) as ThemePresetKey[]).map((key) => {
+            const p = themePresets[key]
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => applyPreset(key)}
+                style={{
+                  padding: '8px 10px',
+                  borderRadius: 6,
+                  border: '1px solid #d4af37',
+                  background: '#1a1a1a',
+                  color: '#f6e27a',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                }}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
       <section>
         <h3>Colors</h3>

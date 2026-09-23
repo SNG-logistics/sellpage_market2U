@@ -9,6 +9,8 @@ const emptyConfig = { content: [], root: { props: {} } } as unknown as SellpageD
 
 afterEach(() => { cleanup(); setMediaStorageAdapter(null) })
 
+// Walks the whole dialog in one test: browse, search, select, upload, delete.
+// The timeout it needs comes from `testTimeout` in vite.config.ts.
 it('C13 browse, search, select/replace, upload and delete through the media service', async () => {
   const make = (name: string): MediaItem => ({ name, path: `sellpages/qa/${name}`, url: `https://example.com/${name}`, size: 4, contentType: 'image/png', updatedAt: 1 })
   const items = [make('logo.png'), make('promo.webp')]

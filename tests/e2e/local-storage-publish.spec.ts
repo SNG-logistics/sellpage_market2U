@@ -1,12 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import type { SellpageDocument } from '../../src/features/sellpage/schemas/sellpage.types'
 
 const STORAGE_KEY = 'market2u:sellpages:v1'
 
-type StoredPage = {
-  id: string
-  slug: string
-  draftConfig: { root: { props: Record<string, unknown> }; content: unknown[]; zones: Record<string, unknown> }
-}
+type StoredPage = SellpageDocument
 
 const readPages = (page: Page) =>
   page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? '{}') as Record<string, StoredPage>, STORAGE_KEY)
@@ -33,9 +30,10 @@ const replaceDraft = (page: Page, id: string, type: 'Heading' | 'Text', copy: st
 test('localStorage create, publish, public isolation, and unpublished fallback', async ({ page }) => {
   await page.goto('/admin/sellpages')
   await expect(page.getByRole('status')).toContainText('Local mode')
+  await page.getByLabel('Page template').selectOption('blank')
 
   await page.getByPlaceholder('New page name').fill('Smoke Published')
-  await page.getByRole('button', { name: 'Create' }).click()
+  await page.getByRole('button', { name: 'Create Page', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/sellpages\/[^/]+$/)
 
   const created = Object.values(await readPages(page)).find((item) => item.slug === 'smoke-published')
@@ -54,8 +52,9 @@ test('localStorage create, publish, public isolation, and unpublished fallback',
   await expect(page.getByText('Draft must stay private')).toHaveCount(0)
 
   await page.goto('/admin/sellpages')
+  await page.getByLabel('Page template').selectOption('blank')
   await page.getByPlaceholder('New page name').fill('Never Published')
-  await page.getByRole('button', { name: 'Create' }).click()
+  await page.getByRole('button', { name: 'Create Page', exact: true }).click()
   const neverPublished = Object.values(await readPages(page)).find((item) => item.slug === 'never-published')
   expect(neverPublished).toBeTruthy()
 

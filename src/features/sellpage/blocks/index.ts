@@ -10,6 +10,14 @@ import { socialButtonConfig, type SocialButtonProps } from './social-button/Soci
 import { containerConfig, type ContainerProps } from './container/Container'
 import { statsConfig, type StatsProps } from './stats/Stats'
 import { alertConfig, type AlertProps } from './alert/Alert'
+import { trustBarConfig, type TrustBarProps } from './trust-bar/TrustBar'
+import { onlineCounterConfig, type OnlineCounterProps } from './online-counter/OnlineCounter'
+import { brandHeroConfig, type BrandHeroProps } from './brand-hero/BrandHero'
+import { promoCardConfig, type PromoCardProps } from './promo-card/PromoCard'
+import { socialLinksSectionConfig, type SocialLinksSectionProps } from './social-links/SocialLinksSection'
+import { statsSectionConfig, type StatsSectionProps } from './stats-section/StatsSection'
+import { securityNoticeConfig, type SecurityNoticeProps } from './security-notice/SecurityNotice'
+import { mainCtaConfig, type MainCtaProps } from './main-cta/MainCTA'
 
 /**
  * BlockRegistry: the single source of truth for every block's props and
@@ -28,10 +36,32 @@ export type BlockProps = {
   Container: ContainerProps
   Stats: StatsProps
   Alert: AlertProps
+  // Luxury Section-based blocks (MVP)
+  TrustBar: TrustBarProps
+  OnlineCounter: OnlineCounterProps
+  BrandHero: BrandHeroProps
+  PromoCard: PromoCardProps
+  SocialLinksSection: SocialLinksSectionProps
+  StatsSection: StatsSectionProps
+  SecurityNotice: SecurityNoticeProps
+  MainCTA: MainCtaProps
 }
 
 export const puckConfig: Config<BlockProps> = {
   categories: {
+    luxury: {
+      title: 'Luxury Sellpage',
+      components: [
+        'TrustBar',
+        'OnlineCounter',
+        'BrandHero',
+        'PromoCard',
+        'SocialLinksSection',
+        'StatsSection',
+        'SecurityNotice',
+        'MainCTA',
+      ],
+    },
     typography: { title: 'Typography', components: ['Heading', 'Text'] },
     actions: { title: 'Actions', components: ['Button', 'SocialButton'] },
     media: { title: 'Media', components: ['Image'] },
@@ -50,5 +80,13 @@ export const puckConfig: Config<BlockProps> = {
     Container: containerConfig,
     Stats: statsConfig,
     Alert: alertConfig,
+    TrustBar: trustBarConfig,
+    OnlineCounter: onlineCounterConfig,
+    BrandHero: brandHeroConfig,
+    PromoCard: promoCardConfig,
+    SocialLinksSection: socialLinksSectionConfig,
+    StatsSection: statsSectionConfig,
+    SecurityNotice: securityNoticeConfig,
+    MainCTA: mainCtaConfig,
   },
 }

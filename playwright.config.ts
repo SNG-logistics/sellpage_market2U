@@ -5,6 +5,13 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   reporter: 'list',
+  // Playwright's defaults are 30s per test and 5s per expect. Opening the
+  // editor lazy-loads the ~467 KB Puck chunk through the dev server, which on
+  // a loaded machine takes longer than 5s often enough that runs failed on a
+  // different assertion each time. The waits below are ceilings for a hang,
+  // not expected durations — a passing run does not get slower for having them.
+  timeout: 90_000,
+  expect: { timeout: 20_000 },
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'retain-on-failure',

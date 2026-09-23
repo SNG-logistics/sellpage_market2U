@@ -213,7 +213,6 @@ export default function MediaLibraryDialog({ media, selectedUrl, onSelect, onClo
             })}
           </ul>
         )}
-        {items !== null && items.length > 0 && !items.some((item) => item.name.toLowerCase().includes(search.trim().toLowerCase())) && <p className="sp-media__empty">No matching images.</p>}
       </div>
     </div>,
     document.body,
