@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createEmptyData, type SellpageData, type SellpageDocument, type SellpageVersion } from '../schemas/sellpage.types'
+import { toPublicDocument } from '../schemas/publicProjection'
+import {
+  createEmptyData,
+  type PublicSellpageDocument,
+  type SellpageData,
+  type SellpageDocument,
+  type SellpageVersion,
+} from '../schemas/sellpage.types'
 import {
   changeSlug,
   createPage,
+  deletePage,
   duplicatePage,
   getPublishedPageBySlug,
   getVersions,
@@ -18,6 +26,7 @@ import type { SellpageStorageAdapter } from './storageAdapter'
 /** In-memory adapter so the service layer is tested without touching localStorage. */
 const makeMemoryAdapter = (): SellpageStorageAdapter => {
   const docs = new Map<string, SellpageDocument>()
+  const publicDocs = new Map<string, PublicSellpageDocument>()
   const versions: SellpageVersion[] = []
   return {
     async list() {
@@ -29,16 +38,24 @@ const makeMemoryAdapter = (): SellpageStorageAdapter => {
     async getBySlug(slug) {
       return [...docs.values()].find((d) => d.slug === slug) ?? null
     },
-    async getPublishedBySlug(slug) {
-      // Mirrors the real adapters: the status filter is part of the lookup,
-      // so a service that used getBySlug here would be caught by these tests.
-      return [...docs.values()].find((d) => d.slug === slug && d.status === 'published') ?? null
+    async getPublicBySlug(slug) {
+      // Serves the stored projection, exactly as the real adapters do. A
+      // service that read the page document instead would pass a test that
+      // filtered by status here, and leak the draft in production.
+      return publicDocs.get(slug) ?? null
     },
     async save(doc) {
+      const previous = docs.get(doc.id)
       docs.set(doc.id, doc)
+      if (previous && previous.slug !== doc.slug) publicDocs.delete(previous.slug)
+      const projection = toPublicDocument(doc)
+      if (projection) publicDocs.set(doc.slug, projection)
+      else publicDocs.delete(doc.slug)
     },
     async remove(id) {
+      const removed = docs.get(id)
       docs.delete(id)
+      if (removed) publicDocs.delete(removed.slug)
     },
     async listVersions(pageId) {
       return versions.filter((v) => v.pageId === pageId).sort((a, b) => b.version - a.version)
@@ -134,6 +151,27 @@ describe('sellpageService', () => {
       const page = await createPage('Never', null)
       const result = await getPublishedPageBySlug(page.slug)
       expect(result).toEqual({ ok: false, reason: 'missing' })
+    })
+
+    it('renaming the slug of a live page stops serving the old one', async () => {
+      const page = await createPage('Moving', null)
+      await saveDraft(page.id, dataWith('Heading', 'h1', 'Here'), null)
+      await publishPage(page.id, null)
+      const moved = await changeSlug(page.id, 'moved-here', null)
+
+      // The old address must not keep serving the page it used to: the
+      // projection at the previous slug has to be dropped, not left behind.
+      expect((await getPublishedPageBySlug(page.slug)).ok).toBe(false)
+      expect((await getPublishedPageBySlug(moved.slug)).ok).toBe(true)
+    })
+
+    it('deleting a page takes the public copy with it', async () => {
+      const page = await createPage('Temporary', null)
+      await saveDraft(page.id, dataWith('Heading', 'h1', 'Bye'), null)
+      await publishPage(page.id, null)
+      await deletePage(page.id)
+
+      expect(await getPublishedPageBySlug(page.slug)).toEqual({ ok: false, reason: 'missing' })
     })
   })
 

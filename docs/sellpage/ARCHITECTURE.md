@@ -88,13 +88,39 @@ therefore changes pages nobody has reopened or republished.
 - `publishPage()` is the only function that writes a `published*` field.
 - The public route calls `getPublishedPageBySlug()`, which refuses drafts and
   unpublished pages by construction.
-- It looks the page up with `getPublishedBySlug()`, **not** `getBySlug()`. The
-  two exist separately because a slug lookup is a *query*, and a backend's
-  access rules can only allow a query whose own constraints prove it cannot
-  return a page the visitor may not see. So `status == 'published'` belongs in
-  the query, not in a check afterwards. `getBySlug()` stays admin-side, for
-  slug uniqueness, where drafts must be visible. (Found by the emulator rules
-  tests: with an admin-only `list`, every public page 404s.)
+
+### The public projection
+
+The table above is the contract inside one document. It is not what a visitor
+is allowed to fetch — **a database returns whole documents.** An access rule
+can say which document may be read, never which fields, so a page that was
+readable because it was published used to hand over its draft with it.
+
+So a live page is stored **twice**: the admin document in `sellpages/{pageId}`,
+and a projection of its published half in `publicPages/{slug}`. The visitor
+reads only the second, which never contained a draft to leak.
+
+- `schemas/publicProjection.ts` is the whole boundary. `toPublicDocument()`
+  **names every field it copies.** Never `...doc` with deletions afterwards: a
+  field added to `SellpageDocument` later would start leaking by itself, on the
+  day it was added, with nothing in the diff to notice.
+- It returns `null` when the page is not live, and callers **delete** the
+  projection. Unpublishing removes the record rather than leaving it readable
+  behind a status flag only the app checks.
+- `PUBLIC_DOCUMENT_KEYS` is mirrored by `publicKeys()` in `firestore.rules`,
+  which pins the stored document to exactly those keys. The browser assembles
+  the projection and the browser is not trusted, so the rule is the real
+  enforcement. `rules.test.ts` compares the two lists; they cannot drift.
+- `adapter.save()` writes the page and reconciles the projection **atomically**
+  — publish, unpublish, rename, a slug change and every autosave all end up
+  there, so no call site can forget, and a crash cannot leave yesterday's copy
+  live at an old slug.
+- Keyed by slug, so the public read is a `get` of a known id. That is why the
+  public rule is `allow get: if true` with nothing to reason about. It replaced
+  a `list` rule that could only mention the fields the query happened to
+  constrain — correct, but one refactor away from being wrong.
+- `getBySlug()` stays admin-side, for slug uniqueness, where drafts must be
+  visible. The public route uses `getPublicBySlug()`.
 
 ## Storage
 
@@ -199,12 +225,17 @@ Puck.)
 browser app and cannot be trusted. `npm run test:emulator` runs both against the
 Firebase emulators; run it after touching either file.
 
-Two things the emulator taught us, both easy to get wrong by reading alone:
+Three things the emulator taught us, all easy to get wrong by reading alone:
 
+- **A rule cannot hide a field.** It decides whether a document is returned,
+  and then the whole document is. Anything a visitor must not have belongs in a
+  document they cannot read — hence `publicPages` (see "The public projection").
 - **A rule for `list` may only mention fields the query constrains.** Firestore
   evaluates a query against the rule *before* reading anything, so it must be
   able to prove safety from the query itself. `status == 'published'` works;
   `publishedConfig != null` does not, however true it is of every stored page.
+  The public read is a `get` by slug now and no longer depends on this, which
+  is most of the reason it was changed.
 - **`request.auth.token.admin` throws** for a token without the claim
   ("Property admin is undefined"), rather than evaluating false. Use
   `request.auth.token.get('admin', false)`. Either way access is denied, so the

@@ -119,10 +119,22 @@ reverts the site only: **rules and Firestore data do not roll back with it**,
 so a release that also changed rules needs those redeployed from the matching
 commit.
 
-## What is NOT safe to deploy yet
+## What a visitor can reach
 
-A published page hands an anonymous reader its whole document, drafts
-included — Firestore cannot redact fields, and the public data has not been
-split into its own document yet. See "Known gaps" in `HANDOFF.md`. Until that
-lands, do not put anything in a draft that must not be public: unannounced
-pricing, supplier cost, customer details.
+Only `publicPages/{slug}` — one document per live page, holding the published
+half and nothing else. `sellpages`, which holds the draft, is admin-only in
+both directions.
+
+Worth knowing before the first publish:
+
+- **Unpublishing deletes the public document**, so the page stops being
+  readable rather than merely stopping being linked.
+- **Renaming a slug retires the old URL.** The projection moves; anything
+  pointing at the previous address gets the fallback page.
+- The `publishedConfig` a visitor receives is whatever was live at the last
+  publish. Draft edits after that are not in the document they can fetch —
+  verify this yourself with step 7 rather than taking it on trust.
+
+To check on the deployed site: open `/s/:slug` in a private window, DevTools →
+Network. The only Firestore read should be `publicPages`, and its response
+should not contain the string `draftConfig`.

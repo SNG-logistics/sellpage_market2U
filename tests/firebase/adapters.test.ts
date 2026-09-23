@@ -94,6 +94,37 @@ describe('firestoreAdapter emulator round-trip', () => {
     expect(await firestoreAdapter.get('one')).toBeNull()
   })
 
+  it('publishes a projection with no draft in it, and drops it again on unpublish', async () => {
+    const draft = makePage('proj')
+    await firestoreAdapter.save(draft)
+    // Nothing public exists for a page that has never gone live.
+    expect(await firestoreAdapter.getPublicBySlug('page-proj')).toBeNull()
+
+    const live = { ...draft, status: 'published' as const, publishedConfig: createEmptyData(), publishedAt: 5 }
+    await firestoreAdapter.save(live)
+
+    const projection = await firestoreAdapter.getPublicBySlug('page-proj')
+    expect(projection).toMatchObject({ pageId: 'proj', slug: 'page-proj', publishedAt: 5 })
+    expect(JSON.stringify(projection)).not.toContain('draft')
+
+    await firestoreAdapter.save({ ...live, status: 'unpublished' })
+    expect(await firestoreAdapter.getPublicBySlug('page-proj')).toBeNull()
+  })
+
+  it('moves the projection with the slug and deletes it with the page', async () => {
+    const live = { ...makePage('moved'), status: 'published' as const, publishedConfig: createEmptyData(), publishedAt: 5 }
+    await firestoreAdapter.save(live)
+    await firestoreAdapter.save({ ...live, slug: 'page-moved-2' })
+
+    // The old address must stop serving: a stale projection there would keep
+    // the page alive at a URL the admin believes they retired.
+    expect(await firestoreAdapter.getPublicBySlug('page-moved')).toBeNull()
+    expect(await firestoreAdapter.getPublicBySlug('page-moved-2')).not.toBeNull()
+
+    await firestoreAdapter.remove('moved')
+    expect(await firestoreAdapter.getPublicBySlug('page-moved-2')).toBeNull()
+  })
+
   it('round-trips versions newest-first and removes them with their page', async () => {
     await firestoreAdapter.save(makePage('versions'))
     await firestoreAdapter.saveVersion(makeVersion('versions', 'v1', 1))

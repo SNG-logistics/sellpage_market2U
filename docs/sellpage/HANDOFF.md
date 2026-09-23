@@ -7,15 +7,15 @@ the Agent A sections and the shared rules. The rules now also live in
 `ARCHITECTURE.md` so they survive, but the status tables only live here.
 How to edit this file safely is spelled out in `/AGENTS.md` — read it first.
 
-**Last updated:** 2026-09-23 · **By:** Agent A (core) — reviewed B's MVP block pass
+**Last updated:** 2026-09-23 · **By:** Agent A (core) — split the public projection out of the page document
 
 ## Repository state
 
 - Branch `main`, **not yet pushed** to `origin` (local is ahead of `origin/main`).
 - `tsc -b` clean · oxlint 0 warnings · `vite build` passes.
-- `npm test` **147/147** (six consecutive runs) · `npm run test:emulator`
-  **12 passed, 1 expected fail** (the documented draft-leak gap) ·
-  `npm run test:e2e` **4/4**.
+- `npm test` **156/156** · `npm run test:emulator` **17 passed, 0 fail** (the
+  draft-leak gap is closed, so the `it.fails` is gone) · `npm run test:e2e`
+  **4/4**.
 - Entry chunk **342 KB raw / 107 KB gzip**.
 - Verified in a real browser: builder, all three panels, the image field, and a
   published page at `/s/:slug`, with no console or page errors.
@@ -79,6 +79,7 @@ Full reasoning is in `ARCHITECTURE.md`; this is the checklist.
 | Block render tests | `blocks/blocks.test.tsx` — every block through the real `SellpageRenderer`, pre-B1 prop sets, Image and Button behaviour. |
 | Phase 8 Media library | `services/mediaService.ts` + lazy `firebaseMediaAdapter.ts`; `imageField()` in `blocks/fields.tsx`; `media/` (field input, lazy dialog, context). Upload with progress, pick, delete with in-use guard. Wired into Image `src`, Hero `logo` and `backgroundImage`. **Tested against an in-memory adapter only — never run against real Storage** (see "NOT done"). |
 | Theme sanitizing | `SellpageRenderer` passes theme colours through `safeColor` and the page background through `safeBackground` before writing `--sp-*`. |
+| A11 Public projection | `schemas/publicProjection.ts` + `publicPages/{slug}`. A visitor reads only the projection; `sellpages` is admin-only. `adapter.save()` reconciles both records atomically. Closes the draft-leak gap. |
 
 ### Firebase project: `market2u-b5f15`
 
@@ -178,6 +179,12 @@ raised were genuine, and both were mine to fix:
   `.get('admin', false)` now.
 - C's draft-leak test is real and now marked `it.fails` so the suite stays
   honest — see "Known gaps".
+
+**Superseded 2026-09-23 (A11).** Both of the first bullet's mechanisms are
+gone: the public read is a `get` on `publicPages/{slug}`, `sellpages` allows no
+public list at all, and the draft-leak test is a plain assertion again. The
+reasoning above is kept because the trap it describes is still true of any
+`list` rule anyone adds later.
 
 ## Agent B — status (frontend / blocks / builder UI / theme)
 
@@ -284,8 +291,8 @@ provider, grant the `admin` claim, then the first real end-to-end pass (sign in
 → upload an image → place it → publish → open `/s/:slug`). **Nothing has ever
 run against live Firebase**; the emulator suite is the closest we have.
 
-Then, before any real customer data: split the public projection so a visitor
-cannot read drafts (gap 1 below).
+Include the projection check from `DEPLOY.md` in that pass: `/s/:slug` in a
+private window should read `publicPages` and nothing else.
 
 Worth doing early: the entry chunk is at 107 KB gzip because every registered
 block ships to every public page. Eight more blocks and it is time to split the
@@ -293,11 +300,10 @@ registry.
 
 ## Known gaps / debt
 
-- **A published page exposes its draft.** A visitor who fetches the document
-  directly gets `draftConfig` and every other draft field. `it.fails` in
-  `tests/firebase/rules.test.ts` documents the contract; the fix is a separate
-  published document/collection, which also lets the `get` rule get simpler.
-  Acceptable only while no draft holds anything private.
+- ~~**A published page exposes its draft.**~~ **Closed 2026-09-23** by
+  `publicPages/{slug}` + `schemas/publicProjection.ts`: a visitor reads a
+  document that never held a draft, and `sellpages` is admin-only. The
+  `it.fails` in `tests/firebase/rules.test.ts` is now a real assertion.
 - Media files are not removed when their page is deleted, and a version
   restored from history can reference an image deleted since.
 - Tracking pixel ids are stored in settings but not yet emitted publicly.

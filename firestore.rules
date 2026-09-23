@@ -5,8 +5,13 @@ rules_version = '2';
 // Threat model: the admin UI is a browser app, so nothing it does can be
 // trusted. These rules are the real boundary.
 //
-// - Anyone may read a page that is actually published, and only the published
-//   half of it is useful to them. Draft-only pages are not readable at all.
+// - `sellpages` is admin-only, in both directions. It holds the draft, so
+//   there is no read a visitor is allowed to make of it.
+// - `publicPages` is what a visitor reads: one document per live page,
+//   assembled from the published half alone by `schemas/publicProjection.ts`.
+//   A rule can say which document may be read, never which fields — so the
+//   only way to keep a draft private is for it never to be in the document
+//   the public can reach.
 // - Only a signed-in admin (custom claim `admin: true`, set server-side with
 //   the Admin SDK) may create, change or delete anything.
 // - Version snapshots are admin-only in both directions; the public page never
@@ -21,30 +26,22 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.get('admin', false) == true;
     }
 
-    function isPublished(page) {
-      return page.status == 'published' && page.publishedConfig != null;
-    }
-
     // Fields a client must never be able to forge or rewrite.
     function immutableIdentity(existing, incoming) {
       return incoming.id == existing.id;
     }
 
-    match /sellpages/{pageId} {
-      // Public read is limited to pages that are live. A draft is invisible
-      // until it has been published at least once.
-      allow get: if isAdmin() || isPublished(resource.data);
+    // Exactly the keys PUBLIC_DOCUMENT_KEYS lists in
+    // `schemas/publicProjection.ts`. rules.test.ts compares the two, so the
+    // rule and the code cannot drift apart unnoticed.
+    function publicKeys() {
+      return ['pageId', 'slug', 'name', 'schemaVersion', 'config', 'theme', 'seo', 'settings', 'publishedAt'];
+    }
 
-      // The public route looks a page up by slug, which Firestore evaluates as
-      // a LIST, not a get — so an admin-only list would take the whole public
-      // site down. Firestore allows a list only when the QUERY proves every
-      // document it could return satisfies this rule, so the condition can
-      // only mention fields the query constrains: `status`, and not
-      // `isPublished`, whose `publishedConfig != null` half is unprovable from
-      // a query. A page with status 'published' always has a publishedConfig
-      // (publishPage writes them together) and getPublishedPageBySlug checks
-      // it again before rendering. An unconstrained list is still refused.
-      allow list: if isAdmin() || resource.data.status == 'published';
+    match /sellpages/{pageId} {
+      // No public read of any kind. This document carries the draft, and
+      // reads return whole documents.
+      allow get, list: if isAdmin();
 
       allow create: if isAdmin()
                     && request.resource.data.id == pageId
@@ -59,6 +56,29 @@ service cloud.firestore {
       match /versions/{versionId} {
         allow read, write: if isAdmin();
       }
+    }
+
+    // What a visitor reads, and the only thing they can.
+    match /publicPages/{slug} {
+      // The public route fetches one known slug. Every document here is
+      // published by definition, so there is nothing to qualify.
+      allow get: if true;
+
+      // Listing is not needed to render a page, and would hand anyone the
+      // whole catalogue of live pages in one request.
+      allow list: if isAdmin();
+
+      // The projection is assembled in the browser, so this is where it is
+      // actually enforced: a document carrying `draftConfig` — or any key not
+      // on the list — is refused however the client got there.
+      allow create, update: if isAdmin()
+                            && request.resource.data.keys().hasOnly(publicKeys())
+                            && request.resource.data.keys().hasAll(publicKeys())
+                            && request.resource.data.slug == slug;
+
+      // Separate from create/update: a delete carries no request.resource, so
+      // the shape conditions above would error on it.
+      allow delete: if isAdmin();
     }
 
     // Anything not matched above is denied.

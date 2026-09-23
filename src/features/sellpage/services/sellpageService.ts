@@ -4,6 +4,7 @@ import {
   defaultSeo,
   defaultSettings,
   defaultTheme,
+  type PublicSellpageDocument,
   type PublishedSellpage,
   type SellpageData,
   type SellpageDocument,
@@ -68,38 +69,37 @@ export type PublishedLookup =
   | { ok: false; reason: 'missing' | 'corrupted' | 'incompatible' }
 
 /**
- * The public route's only entry point. Reads publishedConfig — never the
- * draft — validates it, and migrates it to the current schema version.
- * Returns a reason instead of throwing so the caller renders a fallback
- * rather than a blank page.
+ * The public route's only entry point. Reads the public projection — a
+ * separate record that never held the draft — validates it, and migrates it
+ * to the current schema version. Returns a reason instead of throwing so the
+ * caller renders a fallback rather than a blank page.
  */
 export const getPublishedPageBySlug = async (slug: string): Promise<PublishedLookup> => {
-  let doc: SellpageDocument | null
+  let doc: PublicSellpageDocument | null
   try {
-    doc = await adapter.getPublishedBySlug(slug)
+    doc = await adapter.getPublicBySlug(slug)
   } catch {
     return { ok: false, reason: 'corrupted' }
   }
 
-  if (!doc || doc.status !== 'published' || doc.publishedConfig === null) {
-    return { ok: false, reason: 'missing' }
-  }
+  // A projection exists only for a page that is live: unpublishing deletes it.
+  if (!doc) return { ok: false, reason: 'missing' }
 
-  const parsed = parseSellpageData(doc.publishedConfig, doc.schemaVersion)
+  const parsed = parseSellpageData(doc.config, doc.schemaVersion)
   if (!parsed.ok) return { ok: false, reason: parsed.reason }
 
   return {
     ok: true,
     page: {
-      id: doc.id,
+      id: doc.pageId,
       slug: doc.slug,
       name: doc.name,
       data: parsed.data,
-      // Published look/SEO fall back to defaults if a page was published
-      // before these fields existed; never to the draft values.
-      theme: doc.publishedTheme ?? defaultTheme(),
-      seo: doc.publishedSeo ?? defaultSeo(),
-      settings: doc.publishedSettings ?? defaultSettings(),
+      // Defaults if the page was published before these fields existed;
+      // never the draft values, which are not in this document at all.
+      theme: doc.theme ?? defaultTheme(),
+      seo: doc.seo ?? defaultSeo(),
+      settings: doc.settings ?? defaultSettings(),
       publishedAt: doc.publishedAt,
     },
   }

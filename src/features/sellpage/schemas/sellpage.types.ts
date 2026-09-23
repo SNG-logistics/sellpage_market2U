@@ -103,6 +103,37 @@ export type SellpageDocument = {
   updatedBy: string | null
 }
 
+/**
+ * The only stored document a visitor is allowed to read.
+ *
+ * It is a separate record, not a filtered view: a database cannot redact
+ * fields on read, so anything a visitor may fetch has to have been written
+ * without the draft in it. Built by `toPublicDocument` in
+ * `publicProjection.ts` — the one place that decides what becomes public.
+ *
+ * Keyed by slug rather than page id, so the public read is a single `get`
+ * and the rule for it is `allow get: if true` with nothing else to reason
+ * about.
+ */
+export type PublicSellpageDocument = {
+  /** The admin document this was projected from. Not used to fetch anything. */
+  pageId: string
+  slug: string
+  /** Falls back to the <title> when SEO has none; public already. */
+  name: string
+  schemaVersion: number
+  config: SellpageData
+  /**
+   * Null when the page was published before these fields existed. The public
+   * route substitutes defaults — it never falls back to the draft, which is
+   * not here to fall back to.
+   */
+  theme: SellpageTheme | null
+  seo: SellpageSeo | null
+  settings: SellpageSettings | null
+  publishedAt: number | null
+}
+
 /** What the public route needs to render one page. Nothing draft-derived. */
 export type PublishedSellpage = {
   id: string
