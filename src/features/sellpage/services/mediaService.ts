@@ -1,7 +1,7 @@
 // Imports the SDK-free config module on purpose: the image field reaches this
 // file from `blocks/`, which the PUBLIC renderer also bundles. The Firebase
 // adapter is only ever loaded through the dynamic import below.
-import { isFirebaseConfigured } from '../../../lib/firebaseConfig'
+import { isStorageConfigured } from '../../../lib/firebaseConfig'
 import type { SellpageData } from '../schemas/sellpage.types'
 
 export type MediaItem = {
@@ -48,14 +48,15 @@ export const setMediaStorageAdapter = (next: MediaStorageAdapter | null) => {
 }
 
 /**
- * False in local mode (no Firebase project): there is nowhere to put a file.
- * The image field still works — it falls back to a pasted URL.
+ * False when there is nowhere to put a file: no Firebase project at all, or a
+ * project with no Storage bucket (Spark plan). The image field still works —
+ * it falls back to a pasted URL, which is what it always stored anyway.
  */
-export const isMediaLibraryAvailable = (): boolean => adapter !== null || isFirebaseConfigured()
+export const isMediaLibraryAvailable = (): boolean => adapter !== null || isStorageConfigured()
 
 const getAdapter = async (): Promise<MediaStorageAdapter> => {
   if (adapter) return adapter
-  if (!isFirebaseConfigured()) {
+  if (!isStorageConfigured()) {
     throw new Error('The media library needs Firebase Storage. Paste an image URL instead.')
   }
   // Dynamic import keeps the Firebase SDK out of every bundle that merely

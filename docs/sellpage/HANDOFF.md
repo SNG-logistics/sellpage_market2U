@@ -81,7 +81,7 @@ Full reasoning is in `ARCHITECTURE.md`; this is the checklist.
 | Theme sanitizing | `SellpageRenderer` passes theme colours through `safeColor` and the page background through `safeBackground` before writing `--sp-*`. |
 | A11 Public projection | `schemas/publicProjection.ts` + `publicPages/{slug}`. A visitor reads only the projection; `sellpages` is admin-only. `adapter.save()` reconciles both records atomically. Closes the draft-leak gap. |
 
-### Firebase project: `market2u-b5f15`
+### Firebase project: `sellpage-81ae5`
 
 - Web app **"Market2U Sellpage"** registered; config in `.env.local` (gitignored).
 - `.firebaserc` pins the project; `firebase.json` wires rules, hosting and emulators.

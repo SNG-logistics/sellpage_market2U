@@ -243,7 +243,7 @@ Three things the emulator taught us, all easy to get wrong by reading alone:
 
 ## Still open
 
-Firebase (project `market2u-b5f15`) is built — config, Firestore adapter, auth,
+Firebase (project `sellpage-81ae5`) is built — config, Firestore adapter, auth,
 the `/admin/*` guard, `firestore.rules`, `storage.rules` — but **nothing has
 been deployed or run against a live database**. Before exposing this publicly:
 

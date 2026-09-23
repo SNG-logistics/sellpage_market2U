@@ -7,7 +7,7 @@ import { setMediaStorageAdapter, type MediaItem, type MediaStorageAdapter } from
 import type { SellpageData } from '../schemas/sellpage.types'
 
 // See mediaService.test.ts: keeps `.env.local` from deciding the outcome.
-vi.mock('../../../lib/firebaseConfig', () => ({ isFirebaseConfigured: () => false }))
+vi.mock('../../../lib/firebaseConfig', () => ({ isFirebaseConfigured: () => false, isStorageConfigured: () => false }))
 
 const item = (name: string): MediaItem => ({
   name,

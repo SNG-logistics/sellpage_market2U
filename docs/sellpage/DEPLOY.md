@@ -1,6 +1,6 @@
 # Sellpage deployment
 
-Use project `market2u-b5f15`. Never put an Admin SDK service-account key in
+Use project `sellpage-81ae5`. Never put an Admin SDK service-account key in
 `.env`, `.env.local`, command arguments, or this repository.
 
 ## 1. Verify locally
@@ -38,8 +38,8 @@ rather than guessing which of these is missing.
 
 ```powershell
 npx firebase-tools login
-npx firebase-tools use market2u-b5f15
-npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage --project market2u-b5f15
+npx firebase-tools use sellpage-81ae5
+npx firebase-tools deploy --only firestore:rules,firestore:indexes,storage --project sellpage-81ae5
 ```
 
 Rules go first, before the admin claim and before the site: a project whose
@@ -47,6 +47,31 @@ rules have never been deployed is running whatever the console last had, which
 may be test-mode "allow all". Granting an admin, or publishing a site that
 writes, against those is the one ordering mistake worth avoiding. Do not
 continue unless this command succeeds.
+
+## 3b. Storage, and what to do without it
+
+Cloud Storage needs the **Blaze** plan. A project on Spark has no bucket, and
+`deploy --only storage` fails before it writes anything — which is why step 3
+lists Firestore alone.
+
+Without a bucket, leave `VITE_FIREBASE_STORAGE_BUCKET` **empty**. The console
+shows a bucket name before one exists, and setting it puts an upload button in
+the editor that can only fail at the end of the upload. Empty, the media
+library hides itself and the image field says so.
+
+Images then come from either:
+
+- **`public/`** — a file at `public/images/x.jpg` deploys with the site and is
+  referenced as `/images/x.jpg`. Free, same domain, no third party. Hosting
+  serves a real file before it applies the SPA rewrite, so this does not
+  collide with `/s/:slug`. Adding an image means another build and deploy.
+- **any https URL** — pasted into the image field, as the field has always
+  accepted.
+
+`storage.rules` stays in the repo, correct and tested, simply not deployed. On
+Blaze later: enable Storage, set the bucket variable, rebuild, and run
+`npx firebase-tools deploy --only storage --project sellpage-81ae5`. Nothing
+else changes.
 
 ## 4. Build with production web configuration
 
@@ -64,10 +89,10 @@ npx vite build
 ## 5. Deploy hosting
 
 ```powershell
-npx firebase-tools deploy --only hosting --project market2u-b5f15
+npx firebase-tools deploy --only hosting --project sellpage-81ae5
 ```
 
-The site lands on `https://market2u-b5f15.web.app`. Firebase authorises its own
+The site lands on `https://sellpage-81ae5.web.app`. Firebase authorises its own
 hosting domains for Auth automatically, so Google sign-in works there without
 adding anything to Authorized domains — a custom domain does need adding.
 
@@ -92,7 +117,7 @@ Firebase Auth user, then run the script:
 
 ```powershell
 $env:FIREBASE_SERVICE_ACCOUNT_JSON = Get-Content -Raw 'C:\secure\market2u-service-account.json'
-$env:ADMIN_EMAIL = 'admin@example.com'
+$env:ADMIN_EMAIL = 'goldenstargds99@gmail.com'
 npm run grant-admin
 Remove-Item Env:FIREBASE_SERVICE_ACCOUNT_JSON
 Remove-Item Env:ADMIN_EMAIL

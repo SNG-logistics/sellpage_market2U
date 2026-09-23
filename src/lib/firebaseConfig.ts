@@ -28,3 +28,16 @@ export const isFirebaseConfigured = (): boolean =>
 /** Which required vars are missing — for a clear startup message. */
 export const missingFirebaseVars = (): string[] =>
   REQUIRED.filter((k) => !firebaseConfig[k]).map((k) => `VITE_FIREBASE_${k.replace(/[A-Z]/g, (c) => '_' + c).toUpperCase()}`)
+
+/**
+ * Storage is a separate decision from Firebase itself.
+ *
+ * A project can have Auth and Firestore with no bucket at all: Cloud Storage
+ * needs the Blaze plan, and a project on Spark has none however complete the
+ * rest of the config looks — `storageBucket` is filled in by the console
+ * before any bucket exists. The media library asks this rather than
+ * `isFirebaseConfigured()`, so a project without one hides the upload button
+ * instead of offering an upload that fails at the end.
+ */
+export const isStorageConfigured = (): boolean =>
+  isFirebaseConfigured() && typeof firebaseConfig.storageBucket === 'string' && firebaseConfig.storageBucket !== ''

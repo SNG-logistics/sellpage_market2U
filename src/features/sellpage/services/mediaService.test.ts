@@ -16,7 +16,7 @@ import type { SellpageData } from '../schemas/sellpage.types'
 
 // Vitest loads `.env.local`, so without this the "no Firebase" cases would
 // pass or fail depending on whose machine runs them.
-vi.mock('../../../lib/firebaseConfig', () => ({ isFirebaseConfigured: () => false }))
+vi.mock('../../../lib/firebaseConfig', () => ({ isFirebaseConfigured: () => false, isStorageConfigured: () => false }))
 
 const item = (name: string, updatedAt = 0): MediaItem => ({
   name,
