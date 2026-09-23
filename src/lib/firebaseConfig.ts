@@ -41,3 +41,18 @@ export const missingFirebaseVars = (): string[] =>
  */
 export const isStorageConfigured = (): boolean =>
   isFirebaseConfigured() && typeof firebaseConfig.storageBucket === 'string' && firebaseConfig.storageBucket !== ''
+
+/**
+ * Settings for the one Firestore instance, shared with the emulator tests so
+ * they exercise the configuration the site actually runs with.
+ *
+ * `ignoreUndefinedProperties`: Puck keeps optional keys present-but-undefined
+ * (`root.readOnly`, unset block props). JSON drops those, so the localStorage
+ * adapter always stored pages without them; Firestore rejects the entire
+ * write instead. Dropping them makes Firestore store exactly what localStorage
+ * stored, and loses nothing — rule 8 already treats a missing prop and an
+ * undefined one as the same. Set on the instance rather than per write, so
+ * the page, its public projection and every version snapshot are all covered
+ * and a future write path cannot forget.
+ */
+export const FIRESTORE_SETTINGS = { ignoreUndefinedProperties: true } as const

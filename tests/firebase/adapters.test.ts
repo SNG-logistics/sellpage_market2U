@@ -5,6 +5,7 @@ import type { Firestore } from 'firebase/firestore'
 import type { FirebaseStorage } from 'firebase/storage'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createEmptyData, defaultSeo, defaultSettings, defaultTheme, type SellpageDocument, type SellpageVersion } from '../../src/features/sellpage/schemas/sellpage.types'
+import { FIRESTORE_SETTINGS } from '../../src/lib/firebaseConfig'
 
 let db: Firestore
 let storage: FirebaseStorage
@@ -61,7 +62,8 @@ beforeAll(async () => {
     storage: { rules: await readFile(resolve('storage.rules'), 'utf8') },
   })
   const admin = env.authenticatedContext('admin', { admin: true })
-  db = admin.firestore()
+  // The site's own settings, so these tests run the configuration it ships with.
+  db = admin.firestore(FIRESTORE_SETTINGS)
   storage = admin.storage()
 })
 
@@ -123,6 +125,31 @@ describe('firestoreAdapter emulator round-trip', () => {
 
     await firestoreAdapter.remove('moved')
     expect(await firestoreAdapter.getPublicBySlug('page-moved-2')).toBeNull()
+  })
+
+  it('accepts the undefined values Puck leaves in a page', async () => {
+    // Puck keeps optional keys present-but-undefined — `root.readOnly`, unset
+    // block props. JSON drops them, so the localStorage adapter and every
+    // local test never saw one. Firestore rejects the whole write instead:
+    // the first real save on the deployed site failed on
+    // `draftConfig.root.readOnly`. This page carries both kinds.
+    const config = createEmptyData()
+    ;(config.root as Record<string, unknown>).readOnly = undefined
+    config.content = [{ type: 'Heading', props: { id: 'h1', text: 'Hi', color: undefined } }] as typeof config.content
+
+    const page = { ...makePage('puck'), draftConfig: config }
+    await firestoreAdapter.save(page)
+    // Publishing writes the same config into the projection and a version.
+    const live = { ...page, status: 'published' as const, publishedConfig: config, publishedAt: 5 }
+    await firestoreAdapter.save(live)
+    await firestoreAdapter.saveVersion({ ...makeVersion('puck', 'v1', 1), config })
+
+    const stored = await firestoreAdapter.get('puck')
+    // Dropped, exactly as the localStorage adapter has always stored it.
+    expect(stored?.draftConfig.root).not.toHaveProperty('readOnly')
+    expect(stored?.draftConfig.content[0].props).toEqual({ id: 'h1', text: 'Hi' })
+    expect(await firestoreAdapter.getPublicBySlug('page-puck')).not.toBeNull()
+    expect(await firestoreAdapter.listVersions('puck')).toHaveLength(1)
   })
 
   it('round-trips versions newest-first and removes them with their page', async () => {
